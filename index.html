@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nexus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --background-light: #f1f5f9; /* slate-100 */
+        --background-dark: #0f172a; /* slate-900 */
+        --card-background-light: #ffffff; /* white */
+        --card-background-dark: #1e293b; /* slate-800 */
+        --text-primary-light: #0f172a; /* slate-900 */
+        --text-primary-dark: #f1f5f9; /* slate-100 */
+        --text-secondary-light: #64748b; /* slate-500 */
+        --text-secondary-dark: #94a3b8; /* slate-400 */
+        --border-light: #e2e8f0; /* slate-200 */
+        --border-dark: #334155; /* slate-700 */
+      }
+      body { 
+        font-family: 'Sora', sans-serif; 
+        background-color: var(--background-light);
+        color: var(--text-primary-light);
+      }
+      .dark body {
+        background-color: var(--background-dark);
+        color: var(--text-primary-dark);
+      }
+       ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #d1d5db; /* gray-300 */
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af; /* gray-400 */
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569; /* slate-600 */
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: #64748b; /* slate-500 */
+      }
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-10px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      .animate-fade-in-down {
+        animation: fadeInDown 0.2s ease-out;
+      }
+      @keyframes fadeInScaleUp {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      .animate-fade-in-scale-up {
+        animation: fadeInScaleUp 0.2s ease-out;
+      }
+      .drag-over-indicator {
+        position: relative;
+      }
+      .drag-over-indicator::before {
+          content: '';
+          position: absolute;
+          top: -1px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background-color: #0ea5e9; /* sky-500 */
+          z-index: 10;
+          box-shadow: 0 0 8px #0ea5e9;
+      }
+      @keyframes highlight-fade {
+        from { background-color: rgba(254, 249, 195, 1); } /* yellow-100 */
+        to { background-color: rgba(254, 249, 195, 0); }
+      }
+      .highlight-row {
+        animation: highlight-fade 2.5s ease-out;
+      }
+      @keyframes highlight-fade-dark {
+        from { background-color: rgba(133, 77, 14, 0.5); } /* yellow-800 with opacity */
+        to { background-color: rgba(133, 77, 14, 0); }
+      }
+      .dark .highlight-row {
+        animation: highlight-fade-dark 2.5s ease-out;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.544.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.20.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.2.1",
+    "jspdf": "https://aistudiocdn.com/jspdf@^2.5.1",
+    "jspdf-autotable": "https://aistudiocdn.com/jspdf-autotable@^3.8.2",
+    "html2canvas": "https://aistudiocdn.com/html2canvas@^1.4.1",
+    "react-simple-maps": "https://aistudiocdn.com/react-simple-maps@^3.0.0",
+    "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.45.0",
+    "xlsx": "https://aistudiocdn.com/xlsx@^0.18.5",
+    "papaparse": "https://aistudiocdn.com/papaparse@^5.4.1"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
