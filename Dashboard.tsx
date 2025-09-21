@@ -1,52 +1,16 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Asset, NewsItem, KpiConfig, DashboardWidget, DashboardWidgetId } from './types';
+import React, { useState, useRef, useMemo } from 'react';
+import { Asset, KpiConfig } from './types';
 import html2canvas from 'html2canvas';
 import { generatePortfolioPdf } from './services/pdfService';
+import { Scale, BarChart3, TrendingUp, TrendingDown, Percent, Edit, Save, X, GripVertical, PlusCircle, XCircle } from 'lucide-react';
 
 import Header from './components/Header';
-import StatsBar from './components/StatsBar';
-import PortfolioTable from './components/PortfolioTable';
-import ImportModal from './components/ImportModal';
 import PatrimonialEvolutionChart from './components/PatrimonialEvolutionChart';
-import AllocationCharts from './components/AllocationCharts';
-import KpiSettingsModal from './components/KpiSettingsModal';
-import DashboardSettingsModal from './components/DashboardSettingsModal';
-import TotalEquity from './components/TotalEquity';
-import { Scale, BarChart3, TrendingUp, TrendingDown, Percent, Cog } from 'lucide-react';
-
-interface DashboardProps {
-    portfolioData: Asset[];
-    isDataLoaded: boolean;
-    onEditAsset: (asset: Asset) => void;
-    onDeleteAsset: (id: number) => void;
-    onDuplicateAsset: (id: number) => void;
-    onToggleAlert: (id: number) => void;
-    onAddAsset: () => void;
-    onAiAnalysis: () => void;
-    onOptimizePortfolio: () => void;
-    onImportPortfolio: (assets: Asset[]) => void;
-    onLogout: () => void;
-    onNavigate: (view: string) => void;
-    onReorderAssets: (draggedId: number, targetId: number) => void;
-}
-
-
-const WIDGET_COMPONENTS: { [key in DashboardWidgetId]: React.FC<any> } = {
-  totalEquity: TotalEquity,
-  patrimonialEvolution: PatrimonialEvolutionChart,
-  statsBar: StatsBar,
-  portfolio: PortfolioTable,
-  allocation: AllocationCharts,
-  marketNews: () => null, // Placeholder as it's removed
-};
-
-const DEFAULT_WIDGET_CONFIG: DashboardWidget[] = [
-    { id: 'totalEquity', visible: true, colSpan: 6, order: 0 },
-    { id: 'allocation', visible: true, colSpan: 6, order: 1 },
-    { id: 'portfolio', visible: true, colSpan: 12, order: 2 },
-    { id: 'patrimonialEvolution', visible: true, colSpan: 12, order: 3 },
-    { id: 'marketNews', visible: false, colSpan: 12, order: 4 }, // Hidden by default now
-];
+import TickerTape from './components/TickerTape';
+import MarketPulse from './components/MarketPulse';
+import DashboardAllocationChart from './components/DashboardAllocationChart';
+import AddAssetButton from './components/AddAssetButton';
+import KpiCard from './components/KpiCard';
 
 const ALL_KPIS: KpiConfig[] = [
     { id: 'patrimonioTotal', title: 'Patrimônio Total', icon: Scale, description: 'Valor total atual da sua carteira.' },
@@ -58,139 +22,145 @@ const ALL_KPIS: KpiConfig[] = [
     { id: 'totalInvestido', title: 'Total Investido', icon: BarChart3, description: 'Soma de todo o capital investido.' }
 ];
 
+type WidgetId =
+  | 'patrimonioTotal' | 'lucroPrejuizoTotal' | 'totalGanhos' | 'totalPerdas'
+  | 'lucroPrejuizoPercentual' | 'proventosAnuaisEstimados' | 'totalInvestido'
+  | 'patrimonialEvolution' | 'dashboardAllocation' | 'marketPulse';
+
+interface WidgetConfig {
+    id: WidgetId;
+    colSpan: 3 | 4 | 6 | 8 | 12; // Using specific numbers for Tailwind CSS class generation
+}
+
+const ALL_POSSIBLE_WIDGETS: WidgetConfig[] = [
+    { id: 'patrimonioTotal', colSpan: 3 }, { id: 'lucroPrejuizoTotal', colSpan: 3 },
+    { id: 'lucroPrejuizoPercentual', colSpan: 3 }, { id: 'proventosAnuaisEstimados', colSpan: 3 },
+    { id: 'totalGanhos', colSpan: 3 }, { id: 'totalPerdas', colSpan: 3 },
+    { id: 'totalInvestido', colSpan: 3 },
+    { id: 'patrimonialEvolution', colSpan: 12 }, { id: 'dashboardAllocation', colSpan: 8 },
+    { id: 'marketPulse', colSpan: 4 },
+];
+
+const initialWidgets: WidgetConfig[] = [
+    { id: 'patrimonioTotal', colSpan: 3 }, { id: 'lucroPrejuizoTotal', colSpan: 3 },
+    { id: 'lucroPrejuizoPercentual', colSpan: 3 }, { id: 'proventosAnuaisEstimados', colSpan: 3 },
+    { id: 'patrimonialEvolution', colSpan: 12 }, { id: 'dashboardAllocation', colSpan: 8 },
+    { id: 'marketPulse', colSpan: 4 },
+];
+
+interface DashboardProps {
+    portfolioData: Asset[];
+    isDataLoaded: boolean;
+    onStartAddAssetFlow: () => void;
+    onAiAnalysis: () => void;
+    onOptimizePortfolio: () => void;
+    onLogout: () => void;
+    onNavigate: (view: string) => void;
+    derivedData: { [key: string]: number; };
+    onSelectAsset: (ticker: string) => void;
+}
+
+const getColSpanClass = (span: number) => {
+    const classMap: { [key: number]: string } = {
+        3: 'md:col-span-3', 4: 'md:col-span-4', 6: 'md:col-span-6',
+        8: 'md:col-span-8', 12: 'md:col-span-12',
+    };
+    return classMap[span] || 'md:col-span-12';
+};
 
 const Dashboard: React.FC<DashboardProps> = ({
-    portfolioData,
-    isDataLoaded,
-    onEditAsset,
-    onDeleteAsset,
-    onDuplicateAsset,
-    onToggleAlert,
-    onAddAsset,
-    onAiAnalysis,
-    onOptimizePortfolio,
-    onImportPortfolio,
-    onLogout,
-    onNavigate,
-    onReorderAssets
+    portfolioData, isDataLoaded, onStartAddAssetFlow, onAiAnalysis,
+    onOptimizePortfolio, onLogout, onNavigate, derivedData, onSelectAsset
 }) => {
     const evolutionChartRef = useRef<HTMLDivElement>(null);
     const [isExportingPdf, setIsExportingPdf] = useState(false);
-    const [isKpiSettingsOpen, setIsKpiSettingsOpen] = useState(false);
-    const [visibleKpis, setVisibleKpis] = useState<string[]>(['patrimonioTotal', 'totalGanhos', 'totalPerdas', 'lucroPrejuizoPercentual']);
-    const [widgetConfig, setWidgetConfig] = useState<DashboardWidget[]>(() => {
-        try {
-            const savedConfig = localStorage.getItem('dashboardWidgetConfig');
-            if (savedConfig) {
-                const parsed = JSON.parse(savedConfig);
-                // Basic validation
-                if (Array.isArray(parsed) && parsed.every(item => 'id' in item && 'visible' in item && 'order' in item && 'colSpan' in item)) {
-                    // Filter out marketNews if it exists from an old config
-                    return parsed.filter((w: DashboardWidget) => w.id !== 'marketNews');
-                }
-            }
-        } catch (error) {
-            console.error("Error reading widget config from localStorage, using default.", error);
-        }
-        return DEFAULT_WIDGET_CONFIG.filter(w => w.id !== 'marketNews');
-    });
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-    const [scrollToTicker, setScrollToTicker] = useState<string | null>(null);
+    const [isEditLayoutMode, setIsEditLayoutMode] = useState(false);
+    const [widgets, setWidgets] = useState<WidgetConfig[]>(initialWidgets);
+    const [originalWidgets, setOriginalWidgets] = useState<WidgetConfig[]>(initialWidgets);
+    const [draggedWidgetId, setDraggedWidgetId] = useState<WidgetId | null>(null);
 
+    const hiddenWidgets = useMemo(() =>
+        ALL_POSSIBLE_WIDGETS.filter(w => !widgets.some(vis => vis.id === w.id)),
+        [widgets]
+    );
 
-    useEffect(() => {
-        try {
-            localStorage.setItem('dashboardWidgetConfig', JSON.stringify(widgetConfig));
-        } catch (error) {
-            console.error("Error saving widget config to localStorage.", error);
-        }
-    }, [widgetConfig]);
+    const handleEnterEditMode = () => {
+        setOriginalWidgets(widgets);
+        setIsEditLayoutMode(true);
+    };
 
-    const derivedData = useMemo(() => {
-        let patrimonioTotal = 0;
-        let totalInvestido = 0;
-        let totalGanhos = 0;
-        let totalPerdas = 0;
-        let proventosAnuaisEstimados = 0;
+    const handleCancelEditMode = () => {
+        setWidgets(originalWidgets);
+        setIsEditLayoutMode(false);
+    };
+
+    const handleSaveLayout = () => setIsEditLayoutMode(false);
     
-        portfolioData.forEach(asset => {
-            const valorAtual = asset.cotacaoAtual * asset.quantidade;
-            const custoTotal = asset.precoCompra * asset.quantidade;
-            const lucroPrejuizo = valorAtual - custoTotal;
-    
-            patrimonioTotal += valorAtual;
-            totalInvestido += custoTotal;
-            proventosAnuaisEstimados += valorAtual * asset.dividendYield;
-    
-            if (lucroPrejuizo > 0) {
-                totalGanhos += lucroPrejuizo;
-            } else {
-                totalPerdas += lucroPrejuizo;
-            }
-        });
-    
-        const lucroPrejuizoTotal = patrimonioTotal - totalInvestido;
-        const lucroPrejuizoPercentual = totalInvestido > 0 ? (lucroPrejuizoTotal / totalInvestido) * 100 : 0;
-    
-        return {
-            patrimonioTotal,
-            totalInvestido,
-            lucroPrejuizoTotal,
-            lucroPrejuizoPercentual,
-            proventosAnuaisEstimados,
-            totalGanhos,
-            totalPerdas
-        };
-    }, [portfolioData]);
-    
+    const handleHideWidget = (id: WidgetId) => setWidgets(prev => prev.filter(w => w.id !== id));
+    const handleShowWidget = (id: WidgetId) => {
+        const widgetToAdd = ALL_POSSIBLE_WIDGETS.find(w => w.id === id);
+        if (widgetToAdd) setWidgets(prev => [...prev, widgetToAdd]);
+    };
+
+    const handleDragStart = (id: WidgetId) => setDraggedWidgetId(id);
+    const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+    const handleDragEnd = () => setDraggedWidgetId(null);
+
+    const handleDrop = (targetId: WidgetId) => {
+        if (!draggedWidgetId || draggedWidgetId === targetId) return;
+
+        const updatedWidgets = [...widgets];
+        const draggedIndex = updatedWidgets.findIndex(w => w.id === draggedWidgetId);
+        const targetIndex = updatedWidgets.findIndex(w => w.id === targetId);
+        
+        const [draggedItem] = updatedWidgets.splice(draggedIndex, 1);
+        updatedWidgets.splice(targetIndex, 0, draggedItem);
+        
+        setWidgets(updatedWidgets);
+        setDraggedWidgetId(null);
+    };
+
     const handleExportPdf = async () => {
         if (!evolutionChartRef.current) return;
         setIsExportingPdf(true);
         try {
-            const canvas = await html2canvas(evolutionChartRef.current, { backgroundColor: null });
+            const canvas = await html2canvas(evolutionChartRef.current, { backgroundColor: null, useCORS: true });
             const chartImageDataUrl = canvas.toDataURL('image/png');
-            await generatePortfolioPdf(portfolioData, derivedData, chartImageDataUrl);
+            await generatePortfolioPdf(portfolioData, {
+                patrimonioTotal: derivedData.patrimonioTotal,
+                lucroPrejuizoTotal: derivedData.lucroPrejuizoTotal,
+                totalInvestido: derivedData.totalInvestido,
+                proventosAnuaisEstimados: derivedData.proventosAnuaisEstimados,
+            }, chartImageDataUrl);
         } catch (error) {
             console.error("Failed to export PDF:", error);
         } finally {
              setIsExportingPdf(false);
         }
     };
-    
-    const handleSaveKpis = (newVisibleKpis: string[]) => {
-        setVisibleKpis(newVisibleKpis);
-        setIsKpiSettingsOpen(false);
-    };
-    
-    const handleImportAssets = (importedAssets: Asset[]) => {
-        onImportPortfolio(importedAssets);
-        setIsImportModalOpen(false);
-    };
 
-    const handleSaveWidgetConfig = (newConfig: DashboardWidget[]) => {
-        setWidgetConfig(newConfig);
-        setIsSettingsModalOpen(false);
-    };
-
-    const handleSelectAsset = (ticker: string) => {
-        setScrollToTicker(ticker);
-    };
-
-
-    const sortedWidgets = useMemo(() => {
-        return [...widgetConfig].sort((a, b) => a.order - b.order);
-    }, [widgetConfig]);
-    
-    const getWidgetProps = (id: DashboardWidgetId) => {
+    const renderWidgetComponent = (id: WidgetId) => {
+        const isKpi = ALL_KPIS.some(kpi => kpi.id === id);
+        if (isKpi) {
+            const kpi = ALL_KPIS.find(k => k.id === id)!;
+            const value = id === 'lucroPrejuizoPercentual' ? `${derivedData[id].toFixed(2)}%` : derivedData[id];
+            const format = id.includes('Percentual') ? 'number' : 'currency';
+            
+            return (
+                <KpiCard
+                    title={kpi.title} value={value} format={format} icon={kpi.icon}
+                    isProfit={kpi.id.includes('Ganhos') || kpi.id === 'lucroPrejuizoTotal'}
+                    isLoss={kpi.id.includes('Perdas')} description={kpi.description}
+                    isFeatured={kpi.id === 'patrimonioTotal'}
+                    isEditMode={isEditLayoutMode} onHide={() => handleHideWidget(id)}
+                />
+            );
+        }
         switch (id) {
-            case 'totalEquity': return { value: derivedData.patrimonioTotal };
-            case 'patrimonialEvolution': return { portfolioData, ref: evolutionChartRef };
-            case 'statsBar': return { derivedData, allKpis: ALL_KPIS, visibleKpis, onSettingsClick: () => setIsKpiSettingsOpen(true) };
-            case 'portfolio': return { assets: portfolioData, onEditAsset, onDeleteAsset, onDuplicateAsset, onToggleAlert, onReorderAssets, scrollToTicker, onScrollComplete: () => setScrollToTicker(null) };
-            case 'allocation': return { portfolioData };
-            case 'marketNews': return {}; // No props needed for a null component
-            default: return {};
+            case 'patrimonialEvolution': return <PatrimonialEvolutionChart portfolioData={portfolioData} ref={evolutionChartRef} />;
+            case 'dashboardAllocation': return <DashboardAllocationChart portfolioData={portfolioData} onNavigate={onNavigate} />;
+            case 'marketPulse': return <MarketPulse />;
+            default: return null;
         }
     };
 
@@ -213,83 +183,92 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
 
     return (
-        <div>
-            <Header 
-                portfolioData={portfolioData}
-                onAddAsset={onAddAsset}
-                onAiAnalysis={onAiAnalysis}
-                onExportPdf={handleExportPdf}
-                isExportingPdf={isExportingPdf}
-                onOptimizePortfolio={onOptimizePortfolio}
-                onImportPortfolio={() => setIsImportModalOpen(true)}
-                onLogout={onLogout}
-                onNavigate={onNavigate}
-                onSelectAsset={handleSelectAsset}
-            />
-            <div className="mt-8">
-               <StatsBar 
-                    derivedData={derivedData}
-                    allKpis={ALL_KPIS}
-                    visibleKpis={visibleKpis}
-                    onSettingsClick={() => setIsKpiSettingsOpen(true)}
+        <div className="space-y-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                 <div className="flex items-center gap-4">
+                    <h1 className="text-3xl lg:text-4xl font-bold text-slate-800 dark:text-slate-100">Visão Geral</h1>
+                    {!isEditLayoutMode && (
+                        <button onClick={handleEnterEditMode} className="hidden md:flex items-center gap-1.5 p-2 bg-white dark:bg-slate-700/50 border border-slate-200 dark:border-slate-700 rounded-full font-semibold text-slate-600 dark:text-slate-300 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="Personalizar Layout">
+                           <Edit className="h-4 w-4" />
+                        </button>
+                    )}
+                </div>
+                <Header 
+                    portfolioData={portfolioData} onStartAddAssetFlow={onStartAddAssetFlow} onAiAnalysis={onAiAnalysis}
+                    onExportPdf={handleExportPdf} isExportingPdf={isExportingPdf} onOptimizePortfolio={onOptimizePortfolio}
+                    onLogout={onLogout} onNavigate={onNavigate} onSelectAsset={onSelectAsset}
                 />
             </div>
+            <div className="hidden md:block"><TickerTape assets={portfolioData} /></div>
 
-            <div className="mt-8 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Meu Painel</h2>
-                <button
-                    onClick={() => setIsSettingsModalOpen(true)}
-                    className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 transition-colors"
-                    title="Personalizar painel"
-                >
-                    <Cog className="h-4 w-4" />
-                    Personalizar
-                </button>
-            </div>
+            <div className="space-y-6">
+                {isEditLayoutMode && (
+                    <div className="flex justify-end items-center gap-2 p-3 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-900/30 rounded-lg animate-fade-in-down">
+                         <p className="text-sm font-semibold text-sky-800 dark:text-sky-200 mr-auto">Arraste os widgets para reordenar.</p>
+                         <button onClick={handleCancelEditMode} className="flex items-center gap-1.5 py-1.5 px-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-md font-semibold text-slate-700 dark:text-slate-200 text-sm transition-colors">
+                            <X className="h-4 w-4" /> Cancelar
+                        </button>
+                         <button onClick={handleSaveLayout} className="flex items-center gap-1.5 py-1.5 px-3 bg-sky-600 hover:bg-sky-500 rounded-md font-semibold text-white text-sm transition-colors">
+                            <Save className="h-4 w-4" /> Salvar Layout
+                        </button>
+                    </div>
+                )}
 
-            <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
-                 {sortedWidgets.map(widget => {
-                    if (!widget.visible) return null;
-                    const Component = WIDGET_COMPONENTS[widget.id];
-                    const props = getWidgetProps(widget.id);
-                    const colSpanVariants: { [key: number]: string } = {
-                        1: 'lg:col-span-1', 2: 'lg:col-span-2', 3: 'lg:col-span-3',
-                        4: 'lg:col-span-4', 5: 'lg:col-span-5', 6: 'lg:col-span-6',
-                        7: 'lg:col-span-7', 8: 'lg:col-span-8', 9: 'lg:col-span-9',
-                        10: 'lg:col-span-10', 11: 'lg:col-span-11', 12: 'lg:col-span-12',
-                    };
-                    const colSpanClass = colSpanVariants[widget.colSpan] || 'lg:col-span-12';
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    {widgets.map(widget => {
+                        const colSpanClass = getColSpanClass(widget.colSpan);
+                        const isBeingDragged = draggedWidgetId === widget.id;
+                        const isKpi = ALL_KPIS.some(kpi => kpi.id === widget.id);
 
-
-                    return (
-                        <div
-                            key={widget.id}
-                            className={`${colSpanClass} transition-all duration-300 ease-in-out`}
-                        >
-                           <Component {...props} />
+                        return (
+                            <div
+                                key={widget.id}
+                                className={`relative transition-all duration-300 ${colSpanClass} ${isBeingDragged ? 'opacity-30' : ''}`}
+                                draggable={isEditLayoutMode}
+                                onDragStart={() => handleDragStart(widget.id)}
+                                onDragOver={handleDragOver}
+                                onDrop={() => handleDrop(widget.id)}
+                                onDragEnd={handleDragEnd}
+                            >
+                                {isEditLayoutMode && !isKpi && (
+                                    <>
+                                        <div className="absolute inset-0 border-2 border-dashed border-slate-400 dark:border-slate-600 rounded-lg pointer-events-none z-10" />
+                                        <div className="absolute top-4 left-4 z-20 cursor-grab text-slate-500 dark:text-slate-400" aria-label="Arrastar para reordenar">
+                                            <GripVertical className="h-6 w-6" />
+                                        </div>
+                                        <button onClick={() => handleHideWidget(widget.id)} title={`Ocultar ${widget.id}`} className="absolute top-2 right-2 p-1 bg-slate-200/50 dark:bg-slate-700/50 rounded-full text-slate-500 dark:text-slate-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 z-20 transition-colors">
+                                            <XCircle className="h-5 w-5" />
+                                        </button>
+                                    </>
+                                )}
+                                {renderWidgetComponent(widget.id)}
+                            </div>
+                        );
+                    })}
+                </div>
+                 {isEditLayoutMode && hiddenWidgets.length > 0 && (
+                    <div className="mt-6 pt-6 border-t border-dashed border-slate-300 dark:border-slate-600">
+                        <h3 className="font-semibold text-slate-700 dark:text-slate-300 mb-3">Widgets Ocultos</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {hiddenWidgets.map(widget => {
+                                const kpiInfo = ALL_KPIS.find(k => k.id === widget.id);
+                                const widgetName = kpiInfo ? kpiInfo.title : widget.id.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                return (
+                                <button
+                                    key={widget.id}
+                                    onClick={() => handleShowWidget(widget.id)}
+                                    title={`Adicionar ${widgetName}`}
+                                    className="flex items-center gap-2 py-1.5 px-3 bg-slate-100 dark:bg-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors animate-fade-in-item"
+                                >
+                                    <PlusCircle className="h-4 w-4 text-emerald-500" />
+                                    {widgetName}
+                                </button>
+                            )})}
                         </div>
-                    );
-                 })}
+                    </div>
+                )}
             </div>
-
-             <KpiSettingsModal
-                isOpen={isKpiSettingsOpen}
-                onClose={() => setIsKpiSettingsOpen(false)}
-                allKpis={ALL_KPIS}
-                visibleKpis={visibleKpis}
-                onSave={handleSaveKpis}
-            />
-             <ImportModal
-                isOpen={isImportModalOpen}
-                onClose={() => setIsImportModalOpen(false)}
-                onImport={handleImportAssets}
-            />
-            <DashboardSettingsModal
-                isOpen={isSettingsModalOpen}
-                onClose={() => setIsSettingsModalOpen(false)}
-                currentConfig={widgetConfig}
-                onSave={handleSaveWidgetConfig}
-            />
+             <AddAssetButton onClick={onStartAddAssetFlow} />
         </div>
     );
 };

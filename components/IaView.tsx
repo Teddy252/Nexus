@@ -31,10 +31,10 @@ const IaView: React.FC<IaViewProps> = ({ onAiAnalysis, onOptimizePortfolio }) =>
 
     return (
         <div className="max-w-4xl mx-auto text-center">
-            <header className="mb-12">
+            <header className="mb-8 md:mb-12">
                 <Bot className="h-20 w-20 mx-auto text-sky-500 mb-4" />
-                <h1 className="text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-2">Central de Inteligência Artificial</h1>
-                <p className="text-lg text-slate-500 dark:text-slate-400">Utilize o poder da IA para obter insights profundos e otimizar sua estratégia de investimentos.</p>
+                <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-2">Central de Inteligência Artificial</h1>
+                <p className="text-base md:text-lg text-slate-500 dark:text-slate-400">Utilize o poder da IA para obter insights profundos e otimizar sua estratégia de investimentos.</p>
             </header>
 
             <div className="space-y-8">

@@ -220,7 +220,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, portfolioDat
                             aria-activedescendant={activeIndex > -1 ? `search-result-${activeIndex}` : undefined}
                         />
                         {query && (
-                             <button onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-full hover:bg-slate-200 dark:hover:bg-slate-600">
+                             <button onClick={() => setQuery('')} title="Limpar busca" className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-full hover:bg-slate-200 dark:hover:bg-slate-600">
                                 <X className="h-4 w-4" />
                              </button>
                         )}

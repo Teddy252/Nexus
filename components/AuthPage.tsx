@@ -137,18 +137,22 @@ const AuthPage: React.FC = () => {
                         </button>
                     </form>
 
-                    <div className="flex items-center my-6">
-                        <hr className="flex-grow border-slate-700" />
-                        <span className="mx-4 text-slate-500 text-sm">OU</span>
-                        <hr className="flex-grow border-slate-700" />
+                    <div className="relative my-6">
+                        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                            <div className="w-full border-t border-slate-700" />
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="bg-slate-900 px-2 text-slate-400">Ou continue com</span>
+                        </div>
                     </div>
 
                     <button
+                        type="button"
                         onClick={handleGoogleSignIn}
-                        className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg font-medium text-white transition-colors"
+                        className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg font-semibold text-white transition-colors"
                     >
                         <GoogleIcon />
-                        Entrar com Google
+                        Google
                     </button>
                 </div>
             </div>
@@ -156,4 +160,5 @@ const AuthPage: React.FC = () => {
     );
 };
 
+// FIX: Add default export to make the component available for import.
 export default AuthPage;

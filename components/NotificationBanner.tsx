@@ -32,6 +32,7 @@ const NotificationBanner: React.FC<NotificationBannerProps> = ({ notifications, 
                         onClick={() => onDismiss(notification.id)}
                         className="p-1.5 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700"
                         aria-label="Dispensar notificação"
+                        title="Dispensar notificação"
                     >
                         <X className="h-5 w-5"/>
                     </button>

@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Asset } from '../types';
 import * as XLSX from 'xlsx';
-import Papa from 'papaparse';
 import { X, UploadCloud, Loader2, AlertTriangle, CheckCircle, Bot } from 'lucide-react';
 import { extractAssetsFromFileContent } from '../services/geminiService';
 
@@ -69,6 +68,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
                 riskProfile: categoria === 'Cripto' ? 'Arriscado' : (['FIIs', 'Tesouro Direto'].includes(categoria) ? 'Seguro' : 'Moderado'),
                 historicoPreco: Array(7).fill(preco),
                 dividendYield: 0,
+                order_index: index, // Temporary index, will be properly set in App.tsx
             };
             validAssets.push(newAsset);
         });

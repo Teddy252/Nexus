@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
 import { Asset } from '../types';
-import AllocationCharts from './AllocationCharts';
 import PortfolioTable from './PortfolioTable';
 import { WalletCards, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
+import { useCurrency } from '../context/CurrencyContext';
+import AddAssetButton from './AddAssetButton';
 
 interface CarteiraViewProps {
     portfolioData: Asset[];
@@ -11,9 +12,13 @@ interface CarteiraViewProps {
     onDuplicateAsset: (id: number) => void;
     onToggleAlert: (id: number) => void;
     onReorderAssets: (draggedId: number, targetId: number) => void;
+    selectedAssetIds: Set<number>;
+    onToggleAssetSelection: (id: number) => void;
+    onToggleAllAssets: (assetIds: number[], areAllCurrentlySelected: boolean) => void;
+    scrollToTicker: string | null;
+    onScrollComplete: () => void;
+    onStartAddAssetFlow: () => void;
 }
-
-const formatCurrency = (val: number) => `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const InfoCard: React.FC<{ icon: React.ElementType; title: string; value: string; subtitle?: string; color: string }> = ({ icon: Icon, title, value, subtitle, color }) => {
     const colorClasses = {
@@ -40,6 +45,7 @@ const InfoCard: React.FC<{ icon: React.ElementType; title: string; value: string
 
 
 const CarteiraView: React.FC<CarteiraViewProps> = (props) => {
+    const { formatCurrency, convertValue } = useCurrency();
 
     const portfolioStats = useMemo(() => {
         const data = props.portfolioData;
@@ -74,25 +80,18 @@ const CarteiraView: React.FC<CarteiraViewProps> = (props) => {
 
     return (
         <div className="space-y-8">
-             <header className="mb-8">
-                <h1 className="text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-2">Minha Carteira</h1>
-                <p className="text-lg text-slate-500 dark:text-slate-400">Analise a alocação e gerencie todos os seus ativos em um só lugar.</p>
+             <header className="mb-6 md:mb-8">
+                <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-2">Minha Carteira</h1>
+                <p className="text-base md:text-lg text-slate-500 dark:text-slate-400">Analise e gerencie todos os seus ativos em um só lugar.</p>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <div className="lg:col-span-1 space-y-6">
-                     <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 px-1">Destaques da Carteira</h2>
-                     <InfoCard icon={WalletCards} title="Total de Ativos" value={`${portfolioStats.totalAssets} ativos`} color="sky" />
-                     <InfoCard icon={TrendingUp} title="Melhor Ativo" value={portfolioStats.bestPerformer.ticker} subtitle={`${portfolioStats.bestPerformer.performance.toFixed(1)}%`} color="emerald" />
-                     <InfoCard icon={TrendingDown} title="Pior Ativo" value={portfolioStats.worstPerformer.ticker} subtitle={`${portfolioStats.worstPerformer.performance.toFixed(1)}%`} color="red" />
-                     <InfoCard icon={PiggyBank} title="Maior Posição" value={portfolioStats.largestPosition.ticker} subtitle={formatCurrency(portfolioStats.largestPosition.value)} color="purple" />
-                </div>
-                <div className="lg:col-span-2">
-                    <AllocationCharts portfolioData={props.portfolioData} />
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                 <InfoCard icon={WalletCards} title="Total de Ativos" value={`${portfolioStats.totalAssets} ativos`} color="sky" />
+                 <InfoCard icon={TrendingUp} title="Melhor Ativo" value={portfolioStats.bestPerformer.ticker} subtitle={`${portfolioStats.bestPerformer.performance.toFixed(1)}%`} color="emerald" />
+                 <InfoCard icon={TrendingDown} title="Pior Ativo" value={portfolioStats.worstPerformer.ticker} subtitle={`${portfolioStats.worstPerformer.performance.toFixed(1)}%`} color="red" />
+                 <InfoCard icon={PiggyBank} title="Maior Posição" value={portfolioStats.largestPosition.ticker} subtitle={formatCurrency(convertValue(portfolioStats.largestPosition.value))} color="purple" />
             </div>
             
-            {/* FIX: Added missing scrollToTicker and onScrollComplete props to satisfy PortfolioTableProps. */}
             <PortfolioTable
                 assets={props.portfolioData}
                 onEditAsset={props.onEditAsset}
@@ -100,9 +99,14 @@ const CarteiraView: React.FC<CarteiraViewProps> = (props) => {
                 onDuplicateAsset={props.onDuplicateAsset}
                 onToggleAlert={props.onToggleAlert}
                 onReorderAssets={props.onReorderAssets}
-                scrollToTicker={null}
-                onScrollComplete={() => {}}
+                scrollToTicker={props.scrollToTicker}
+                onScrollComplete={props.onScrollComplete}
+                selectedAssetIds={props.selectedAssetIds}
+                onToggleAssetSelection={props.onToggleAssetSelection}
+                onToggleAllAssets={props.onToggleAllAssets}
             />
+
+            <AddAssetButton onClick={props.onStartAddAssetFlow} />
         </div>
     );
 };

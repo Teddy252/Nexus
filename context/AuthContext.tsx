@@ -1,7 +1,6 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { AuthChangeEvent, Session, User, GoTrueAdminApi } from '@supabase/supabase-js';
-import { INITIAL_PORTFOLIO_DATA } from '../constants';
 import { UserProfile } from '../types';
 
 interface AuthContextType {
@@ -14,6 +13,7 @@ interface AuthContextType {
     updateUserProfile: (updates: { first_name?: string; last_name?: string }) => Promise<void>;
     uploadAvatar: (file: File) => Promise<void>;
     updateUserPassword: (password: string) => Promise<{ error: Error | null }>;
+    updateUserEmail: (email: string) => Promise<{ error: Error | null }>;
 }
 
 export const AuthContext = createContext<AuthContextType>(null!);
@@ -89,6 +89,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (session?.user) {
                 const profile = await fetchUserProfile(session.user);
                 setUserProfile(profile);
+            } else {
+                setUserProfile(null);
             }
             setLoading(false);
         };
@@ -101,29 +103,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setCurrentUser(user);
 
                 if (event === 'SIGNED_IN' && user) {
-                    let profile = await fetchUserProfile(user);
-
-                    // If profile doesn't exist, create one
-                    if (!profile) {
-                        const { data: newProfile, error: insertError } = await supabase
-                            .from('profiles')
-                            .insert({
-                                id: user.id,
-                                first_name: user.user_metadata.full_name?.split(' ')[0] || 'Novo',
-                                last_name: user.user_metadata.full_name?.split(' ').slice(1).join(' ') || 'Usuário',
-                                avatar_url: user.user_metadata.avatar_url,
-                                portfolio_data: INITIAL_PORTFOLIO_DATA,
-                                kpi_config: ['patrimonioTotal', 'totalGanhos', 'totalPerdas', 'proventosAnuaisEstimados']
-                            })
-                            .select()
-                            .single();
-                        
-                        if (insertError) {
-                            console.error("Error creating profile:", insertError);
-                        } else {
-                            profile = newProfile as UserProfile;
-                        }
-                    }
+                    const profile = await fetchUserProfile(user);
                     setUserProfile(profile);
                 } else if (event === 'SIGNED_OUT') {
                     setUserProfile(null);
@@ -151,6 +131,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }),
         logout: () => supabase.auth.signOut(),
         updateUserPassword: (password: string) => supabase.auth.updateUser({ password }),
+        updateUserEmail: (email: string) => supabase.auth.updateUser({ email }),
     };
 
     return (

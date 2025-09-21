@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { Asset, AiAnalysis, NewsItem, AiOptimizationAnalysis, SimulatedSale, TaxSummary } from '../types';
+import { Asset, AiAnalysis, NewsItem, AiOptimizationAnalysis, SimulatedSale, TaxSummary, OptimizationStrategy } from '../types';
 
 if (!process.env.API_KEY) {
     console.warn("API_KEY environment variable not set. AI features will not work.");
@@ -163,7 +163,7 @@ export const getPortfolioAnalysis = async (portfolio: Asset[]): Promise<AiAnalys
 const optimizationSchema = {
     type: Type.OBJECT,
     properties: {
-        strategySummary: { type: Type.STRING, description: 'Um resumo conciso e inteligente da estratégia de otimização proposta para um perfil de crescimento balanceado.' },
+        strategySummary: { type: Type.STRING, description: 'Um resumo conciso e inteligente da estratégia de otimização proposta para o perfil de risco solicitado.' },
         suggestions: {
             type: Type.ARRAY,
             description: "Uma lista de ações (comprar, vender, manter) para otimizar o portfólio.",
@@ -186,7 +186,7 @@ const optimizationSchema = {
 };
 
 
-export const getPortfolioOptimization = async (portfolio: Asset[]): Promise<AiOptimizationAnalysis> => {
+export const getPortfolioOptimization = async (portfolio: Asset[], strategy: OptimizationStrategy): Promise<AiOptimizationAnalysis> => {
      const simplifiedPortfolio = portfolio.map(({ ticker, nome, categoria, pais, precoCompra, cotacaoAtual, quantidade, riskProfile }) => ({
         ticker,
         nome,
@@ -198,21 +198,29 @@ export const getPortfolioOptimization = async (portfolio: Asset[]): Promise<AiOp
         valorAtual: cotacaoAtual * quantidade,
     }));
     
+    const strategyExplanations: Record<OptimizationStrategy, string> = {
+        'Conservador': 'Foco em preservação de capital, baixa volatilidade e geração de renda. Priorize ativos como títulos de renda fixa, FIIs de tijolo sólidos e ações de empresas grandes e estáveis que pagam dividendos (blue chips).',
+        'Balanceado': 'Busca uma combinação equilibrada de crescimento e segurança. A carteira deve ser diversificada entre diferentes classes de ativos, incluindo ações de boas empresas, FIIs, ETFs e uma pequena parcela em ativos mais arriscados.',
+        'Agressivo': 'Objetivo de maximizar o crescimento do capital, aceitando alta volatilidade e risco. Priorize ações de crescimento (growth stocks), small caps, criptoativos e outros ativos com alto potencial de valorização.'
+    };
+    
     const prompt = `
         Aja como um gestor de portfólio experiente e proativo.
         Analise o portfólio de investimentos de um investidor brasileiro e forneça um plano de otimização claro e acionável.
-        O objetivo é rebalancear a carteira para um perfil de "crescimento balanceado", melhorando a diversificação e o potencial de retorno sem assumir riscos excessivos.
+        O objetivo é rebalancear a carteira para um perfil "${strategy}".
+        
+        Descrição do perfil "${strategy}": ${strategyExplanations[strategy]}
         
         Sua resposta deve estar em português do Brasil e seguir estritamente o schema JSON.
         
         Para cada ativo no portfólio atual, decida se a ação é MANTER ('KEEP') ou VENDER ('SELL').
         Se for vender, especifique a quantidade a ser vendida (pode ser parcial ou total).
         
-        Para melhorar o portfólio, sugira a COMPRA ('BUY') de novos ativos ou o aumento da posição em ativos existentes.
+        Para melhorar o portfólio, sugira a COMPRA ('BUY') de novos ativos ou o aumento da posição em ativos existentes que se alinhem à estratégia.
         Para cada sugestão de COMPRA, forneça todos os dados necessários (ticker, nome, categoria, país, quantidade, preço atual).
         
-        Cada sugestão, seja de compra, venda ou manutenção, deve ter uma justificativa clara e concisa.
-        Finalize com um resumo da estratégia geral.
+        Cada sugestão, seja de compra, venda ou manutenção, deve ter uma justificativa clara e concisa, alinhada à estratégia ${strategy}.
+        Finalize com um resumo da estratégia geral aplicada.
 
         Dados do Portfólio Atual:
         ${JSON.stringify(simplifiedPortfolio, null, 2)}
@@ -296,71 +304,6 @@ export const getRelevantNews = async (query: string): Promise<NewsItem[]> => {
         console.error("Error fetching relevant news:", error);
         // Propagate the original error for specific handling in the UI
         throw error;
-    }
-};
-
-
-const assetExtractionSchema = {
-    type: Type.OBJECT,
-    properties: {
-        assets: {
-            type: Type.ARRAY,
-            description: "Uma lista de ativos financeiros extraídos do arquivo.",
-            items: {
-                type: Type.OBJECT,
-                properties: {
-                    ticker: { type: Type.STRING, description: "O código (ticker) do ativo." },
-                    quantidade: { type: Type.NUMBER, description: "A quantidade de cotas/unidades do ativo." },
-                    precoCompra: { type: Type.NUMBER, description: "O preço médio de compra por unidade do ativo." },
-                    nome: { type: Type.STRING, description: "O nome completo do ativo, se disponível." },
-                    categoria: { type: Type.STRING, description: "A categoria do ativo (ex: Ações, FIIs), se disponível." },
-                    corretora: { type: Type.STRING, description: "A corretora onde o ativo está custodiado, se disponível." },
-                    pais: { type: Type.STRING, description: "O país de origem do ativo, se disponível." },
-                },
-                required: ["ticker", "quantidade", "precoCompra"],
-            },
-        },
-    },
-     required: ["assets"],
-};
-
-
-export const extractAssetsFromFileContent = async (fileContent: string): Promise<Partial<Asset>[]> => {
-    const prompt = `
-        Aja como um assistente inteligente de importação de dados financeiros.
-        Analise o conteúdo do arquivo de portfólio de um usuário fornecido abaixo. O conteúdo pode ser um CSV ou um JSON.
-        Sua tarefa é identificar e extrair a lista de ativos financeiros.
-
-        Instruções:
-        1.  Identifique as colunas que representam o código do ativo (ticker), a quantidade e o preço de compra. Os nomes das colunas podem variar (ex: 'Ativo', 'Código', 'qtd', 'Preço Médio', 'pm'). Use sua inteligência para mapeá-los corretamente.
-        2.  Extraia cada linha como um ativo individual.
-        3.  Para cada ativo, forneça o 'ticker', 'quantidade' e 'precoCompra'. A quantidade e o preço de compra devem ser números.
-        4.  Se possível, identifique e extraia também as colunas 'nome', 'categoria', 'corretora' e 'pais'. Se não encontrar, não inclua esses campos.
-        5.  Ignore linhas de resumo, totais, ou linhas em branco que não representem um ativo.
-        6.  Retorne os dados como um objeto JSON que segue estritamente o schema fornecido.
-
-        Conteúdo do Arquivo para Análise:
-        \`\`\`
-        ${fileContent}
-        \`\`\`
-    `;
-
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: assetExtractionSchema,
-            },
-        });
-
-        const jsonText = response.text.trim();
-        const parsed = JSON.parse(jsonText) as { assets: Partial<Asset>[] };
-        return parsed.assets || [];
-    } catch (error) {
-        console.error("Error extracting assets with AI:", error);
-        throw new Error("A IA não conseguiu analisar o arquivo. Verifique se o formato é simples e contém colunas claras como 'ticker', 'quantidade' e 'precoCompra'.");
     }
 };
 
@@ -452,5 +395,69 @@ export const getTaxExplanation = async (summary: TaxSummary, sales: SimulatedSal
     } catch (error) {
         console.error("Error fetching tax explanation from AI:", error);
         throw new Error("A IA não conseguiu gerar a análise tributária. Tente novamente.");
+    }
+};
+
+const assetExtractionSchema = {
+    type: Type.OBJECT,
+    properties: {
+        assets: {
+            type: Type.ARRAY,
+            description: "Uma lista de ativos financeiros extraídos do arquivo.",
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    ticker: { type: Type.STRING, description: "O código (ticker) do ativo." },
+                    quantidade: { type: Type.NUMBER, description: "A quantidade de cotas/unidades do ativo." },
+                    precoCompra: { type: Type.NUMBER, description: "O preço médio de compra por unidade do ativo." },
+                    nome: { type: Type.STRING, description: "O nome completo do ativo, se disponível." },
+                    categoria: { type: Type.STRING, description: "A categoria do ativo (ex: Ações, FIIs), se disponível." },
+                    corretora: { type: Type.STRING, description: "A corretora onde o ativo está custodiado, se disponível." },
+                    pais: { type: Type.STRING, description: "O país de origem do ativo, se disponível." },
+                },
+                required: ["ticker", "quantidade", "precoCompra"],
+            },
+        },
+    },
+     required: ["assets"],
+};
+
+
+export const extractAssetsFromFileContent = async (fileContent: string): Promise<Partial<Asset>[]> => {
+    const prompt = `
+        Aja como um assistente inteligente de importação de dados financeiros.
+        Analise o conteúdo do arquivo de portfólio de um usuário fornecido abaixo. O conteúdo pode ser um CSV ou um JSON.
+        Sua tarefa é identificar e extrair a lista de ativos financeiros.
+
+        Instruções:
+        1.  Identifique as colunas que representam o código do ativo (ticker), a quantidade e o preço de compra. Os nomes das colunas podem variar (ex: 'Ativo', 'Código', 'qtd', 'Preço Médio', 'pm'). Use sua inteligência para mapeá-los corretamente.
+        2.  Extraia cada linha como um ativo individual.
+        3.  Para cada ativo, forneça o 'ticker', 'quantidade' e 'precoCompra'. A quantidade e o preço de compra devem ser números.
+        4.  Se possível, identifique e extraia também as colunas 'nome', 'categoria', 'corretora' e 'pais'. Se não encontrar, não inclua esses campos.
+        5.  Ignore linhas de resumo, totais, ou linhas em branco que não representem um ativo.
+        6.  Retorne os dados como um objeto JSON que segue estritamente o schema fornecido.
+
+        Conteúdo do Arquivo para Análise:
+        \`\`\`
+        ${fileContent}
+        \`\`\`
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: assetExtractionSchema,
+            },
+        });
+
+        const jsonText = response.text.trim();
+        const parsed = JSON.parse(jsonText) as { assets: Partial<Asset>[] };
+        return parsed.assets || [];
+    } catch (error) {
+        console.error("Error extracting assets with AI:", error);
+        throw new Error("A IA não conseguiu analisar o arquivo. Verifique se o formato é simples e contém colunas claras como 'ticker', 'quantidade' e 'precoCompra'.");
     }
 };

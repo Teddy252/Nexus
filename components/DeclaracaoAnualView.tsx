@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Asset } from '../types';
 import { FileText, Loader2, Clipboard, Check, AlertTriangle } from 'lucide-react';
-
-const formatCurrency = (val: number) => `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+import { useCurrency } from '../context/CurrencyContext';
 
 interface IrInfo {
     group: string;
@@ -20,6 +19,7 @@ interface DeclaracaoAnualViewProps {
 const DeclaracaoAnualView: React.FC<DeclaracaoAnualViewProps> = ({ portfolioData, irInfo, loadingInfo, error }) => {
     const [year, setYear] = useState(new Date().getFullYear() - 1);
     const [copiedTicker, setCopiedTicker] = useState<string | null>(null);
+    const { formatCurrency, convertValue } = useCurrency();
 
     const handleCopyToClipboard = (text: string, ticker: string) => {
         navigator.clipboard.writeText(text);
@@ -45,9 +45,9 @@ const DeclaracaoAnualView: React.FC<DeclaracaoAnualViewProps> = ({ portfolioData
     
     return (
         <div className="max-w-6xl mx-auto">
-            <header className="mb-8">
-                <h1 className="text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-2">Declaração Anual de IR</h1>
-                <p className="text-lg text-slate-500 dark:text-slate-400">Consolide as informações da sua carteira para a declaração de "Bens e Direitos".</p>
+            <header className="mb-6 md:mb-8">
+                <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-2">Declaração Anual de IR</h1>
+                <p className="text-base md:text-lg text-slate-500 dark:text-slate-400">Consolide as informações da sua carteira para a declaração de "Bens e Direitos".</p>
             </header>
             
             <div className="flex flex-col md:flex-row gap-6 mb-8 p-6 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg items-center">
@@ -61,7 +61,7 @@ const DeclaracaoAnualView: React.FC<DeclaracaoAnualViewProps> = ({ portfolioData
                 </div>
                  <div className="flex-grow text-center md:text-right">
                     <p className="text-sm text-slate-500 dark:text-slate-400">Valor Total em Bens e Direitos (Custo de Aquisição)</p>
-                    <p className="text-3xl font-bold text-sky-600 dark:text-sky-400">{formatCurrency(totalAcquisitionCost)}</p>
+                    <p className="text-3xl font-bold text-sky-600 dark:text-sky-400">{formatCurrency(convertValue(totalAcquisitionCost))}</p>
                 </div>
             </div>
 
@@ -100,7 +100,7 @@ const DeclaracaoAnualView: React.FC<DeclaracaoAnualViewProps> = ({ portfolioData
                                 .replace(/\[TICKER\]/g, asset.ticker)
                                 .replace(/\[NOME_EMPRESA\]/g, asset.nome)
                                 .replace(/\[QUANTIDADE\]/g, asset.quantidade.toLocaleString('pt-BR', {maximumFractionDigits: 6}))
-                                .replace(/\[CUSTO_TOTAL\]/g, formatCurrency(custoTotal))
+                                .replace(/\[CUSTO_TOTAL\]/g, `R$ ${custoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`) // Keep BRL for official document text
                                 .replace(/\[CORRETORA\]/g, asset.corretora);
 
                             return (
@@ -112,7 +112,7 @@ const DeclaracaoAnualView: React.FC<DeclaracaoAnualViewProps> = ({ portfolioData
                                         </div>
                                         <div className="text-right flex-shrink-0 ml-4">
                                             <p className="text-sm text-slate-500 dark:text-slate-400">Situação em 31/12/{year}</p>
-                                            <p className="font-bold text-lg text-slate-800 dark:text-slate-100">{formatCurrency(custoTotal)}</p>
+                                            <p className="font-bold text-lg text-slate-800 dark:text-slate-100">{formatCurrency(convertValue(custoTotal))}</p>
                                         </div>
                                     </div>
                                     <div className="mt-4 p-3 bg-slate-100 dark:bg-slate-900/70 rounded-lg">

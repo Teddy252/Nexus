@@ -59,9 +59,21 @@ const NoticiasView: React.FC<NoticiasViewProps> = ({ portfolioData }) => {
     }, [debouncedQuery, fetchNews]);
 
     const handleFetchPortfolioNews = () => {
-        const tickers = [...new Set(portfolioData.map(a => a.ticker))].slice(0, 10).join(', ');
-        if (tickers) {
-            setQuery(tickers);
+        if (portfolioData.length === 0) {
+            return;
+        }
+
+        const topTickers = portfolioData
+            .map(asset => ({
+                ticker: asset.ticker,
+                marketValue: asset.quantidade * asset.cotacaoAtual,
+            }))
+            .sort((a, b) => b.marketValue - a.marketValue)
+            .slice(0, 10)
+            .map(a => a.ticker);
+
+        if (topTickers.length > 0) {
+            setQuery(topTickers.join(', '));
         }
     };
 
@@ -115,9 +127,9 @@ const NoticiasView: React.FC<NoticiasViewProps> = ({ portfolioData }) => {
 
     return (
         <div className="max-w-7xl mx-auto">
-            <header className="mb-8">
-                <h1 className="text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-2">Central de Notícias</h1>
-                <p className="text-lg text-slate-500 dark:text-slate-400">Pesquise as últimas notícias do mercado financeiro para se manter informado.</p>
+            <header className="mb-6 md:mb-8">
+                <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-2">Central de Notícias</h1>
+                <p className="text-base md:text-lg text-slate-500 dark:text-slate-400">Pesquise as últimas notícias do mercado financeiro para se manter informado.</p>
             </header>
             
             <div className="sticky top-4 z-10 bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-md p-4 -mx-4 mb-8 rounded-b-xl shadow-sm">

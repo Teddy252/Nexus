@@ -5,8 +5,7 @@ import { generateDarfPdf } from '../services/pdfService';
 import { getTaxExplanation } from '../services/geminiService';
 import { useDebounce } from '../hooks/useDebounce';
 import { Plus, Trash2, Calculator, BarChart, TrendingUp, FileText, AlertTriangle, BrainCircuit, Loader2 } from 'lucide-react';
-
-const formatCurrency = (val: number) => `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+import { useCurrency } from '../context/CurrencyContext';
 
 const StatCard: React.FC<{ title: string; value: string; icon: React.ElementType, color: string }> = ({ title, value, icon: Icon, color }) => (
     <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4">
@@ -28,6 +27,7 @@ const IrMensalView: React.FC<{ portfolioData: Asset[] }> = ({ portfolioData }) =
     const [aiExplanation, setAiExplanation] = useState<string | null>(null);
     const [isAiLoading, setIsAiLoading] = useState(false);
     const [aiError, setAiError] = useState<string | null>(null);
+    const { formatCurrency, convertValue } = useCurrency();
 
     const handleAddSale = (e: React.FormEvent) => {
         e.preventDefault();
@@ -76,6 +76,7 @@ const IrMensalView: React.FC<{ portfolioData: Asset[] }> = ({ portfolioData }) =
             setIsAiLoading(true);
             setAiError(null);
             try {
+                // Pass the BRL summary to the AI service
                 const explanation = await getTaxExplanation(debouncedTaxSummary, salesInMonth);
                 setAiExplanation(explanation);
             } catch (error: any) {
@@ -133,9 +134,9 @@ const IrMensalView: React.FC<{ portfolioData: Asset[] }> = ({ portfolioData }) =
 
     return (
          <div className="max-w-6xl mx-auto">
-            <header className="mb-8">
-                <h1 className="text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-2">Calculadora de IR Mensal</h1>
-                <p className="text-lg text-slate-500 dark:text-slate-400">Simule suas vendas e calcule o imposto de renda sobre ganhos de capital.</p>
+            <header className="mb-6 md:mb-8">
+                <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-2">Calculadora de IR Mensal</h1>
+                <p className="text-base md:text-lg text-slate-500 dark:text-slate-400">Simule suas vendas e calcule o imposto de renda sobre ganhos de capital.</p>
             </header>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -180,16 +181,16 @@ const IrMensalView: React.FC<{ portfolioData: Asset[] }> = ({ portfolioData }) =
                  {/* Coluna de Resultados */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <StatCard title="Vendas (Ações)" value={formatCurrency(taxSummary.totalSalesAcoes)} icon={BarChart} color="sky" />
-                        <StatCard title="Vendas (Cripto)" value={formatCurrency(taxSummary.totalSalesCripto)} icon={BarChart} color="amber" />
-                        <StatCard title="Lucro/Prejuízo Total" value={formatCurrency(taxSummary.profitAcoes + taxSummary.profitFiis + taxSummary.profitCripto)} icon={TrendingUp} color="purple" />
+                        <StatCard title="Vendas (Ações)" value={formatCurrency(convertValue(taxSummary.totalSalesAcoes))} icon={BarChart} color="sky" />
+                        <StatCard title="Vendas (Cripto)" value={formatCurrency(convertValue(taxSummary.totalSalesCripto))} icon={BarChart} color="amber" />
+                        <StatCard title="Lucro/Prejuízo Total" value={formatCurrency(convertValue(taxSummary.profitAcoes + taxSummary.profitFiis + taxSummary.profitCripto))} icon={TrendingUp} color="purple" />
                     </div>
                     
                      <div className="bg-gradient-to-br from-emerald-500 to-green-600 dark:from-emerald-600 dark:to-green-700 p-6 rounded-2xl shadow-2xl text-white">
                         <div className="flex justify-between items-center">
                             <div>
                                 <p className="text-lg font-medium opacity-80">Imposto Devido (DARF)</p>
-                                <p className="text-5xl font-bold tracking-tight">{formatCurrency(taxSummary.taxDue)}</p>
+                                <p className="text-5xl font-bold tracking-tight">{formatCurrency(convertValue(taxSummary.taxDue))}</p>
                             </div>
                              <button 
                                 onClick={() => generateDarfPdf(month, taxSummary.taxDue)}
@@ -221,9 +222,9 @@ const IrMensalView: React.FC<{ portfolioData: Asset[] }> = ({ portfolioData }) =
                                             <tr key={sale.id} className="border-b border-slate-100 dark:border-slate-800">
                                                 <td className="p-3 font-medium text-slate-800 dark:text-slate-100">{sale.asset.ticker}</td>
                                                 <td className="p-3 text-right text-slate-600 dark:text-slate-300">{sale.quantity.toLocaleString('pt-BR')}</td>
-                                                <td className={`p-3 text-right font-semibold ${sale.profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{formatCurrency(sale.profit)}</td>
+                                                <td className={`p-3 text-right font-semibold ${sale.profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{formatCurrency(convertValue(sale.profit))}</td>
                                                 <td className="p-3 text-center">
-                                                     <button onClick={() => handleDeleteSale(sale.id)} className="p-2 text-slate-500 hover:text-red-500 rounded-full"><Trash2 className="h-4 w-4" /></button>
+                                                     <button onClick={() => handleDeleteSale(sale.id)} title="Excluir venda" className="p-2 text-slate-500 hover:text-red-500 rounded-full"><Trash2 className="h-4 w-4" /></button>
                                                 </td>
                                             </tr>
                                         ))}

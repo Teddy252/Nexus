@@ -26,7 +26,7 @@ const AiOptimizationModal: React.FC<AiOptimizationModalProps> = ({ isOpen, onClo
     const renderLoading = () => (
         <div className="flex flex-col items-center justify-center h-full">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-sky-400"></div>
-            <p className="mt-4 text-slate-600 dark:text-slate-300">Otimizando seu portfóli_o...</p>
+            <p className="mt-4 text-slate-600 dark:text-slate-300">Otimizando seu portfólio...</p>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">A IA está elaborando um plano de ação para você.</p>
         </div>
     );
@@ -74,7 +74,7 @@ const AiOptimizationModal: React.FC<AiOptimizationModalProps> = ({ isOpen, onClo
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-center z-50 p-4">
             <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 w-full max-w-2xl rounded-xl shadow-2xl flex flex-col">
                 <header className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-700">
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Otimização de Portfóli_o com IA</h2>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Otimização de Portfólio com IA</h2>
                     <button onClick={onClose} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 rounded-full">
                         <X className="h-6 w-6" />
                     </button>

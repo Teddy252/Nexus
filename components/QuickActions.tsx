@@ -1,13 +1,12 @@
 import React from 'react';
-import { PlusCircle, BrainCircuit, Download, Loader2, Wand2, UploadCloud } from 'lucide-react';
+import { PlusCircle, BrainCircuit, Download, Loader2, Wand2 } from 'lucide-react';
 
 interface QuickActionsProps {
-    onAddAsset: () => void;
+    onStartAddAssetFlow: () => void;
     onAiAnalysis: () => void;
     onExportPdf: () => void;
     isExportingPdf: boolean;
     onOptimizePortfolio: () => void;
-    onImportPortfolio: () => void;
 }
 
 const ActionButton: React.FC<{ onClick?: () => void; title: string; icon?: React.ElementType; disabled?: boolean; children?: React.ReactNode }> = ({ onClick, title, icon: Icon, disabled, children }) => (
@@ -22,16 +21,11 @@ const ActionButton: React.FC<{ onClick?: () => void; title: string; icon?: React
 );
 
 
-const QuickActions: React.FC<QuickActionsProps> = ({ onAddAsset, onAiAnalysis, onExportPdf, isExportingPdf, onOptimizePortfolio, onImportPortfolio }) => {
+const QuickActions: React.FC<QuickActionsProps> = ({ onStartAddAssetFlow, onAiAnalysis, onExportPdf, isExportingPdf, onOptimizePortfolio }) => {
     return (
         <div className="flex items-center space-x-2">
             <ActionButton
-                onClick={onImportPortfolio}
-                title="Importar Carteira (.csv, .xlsx)"
-                icon={UploadCloud}
-            />
-            <ActionButton
-                onClick={onAddAsset}
+                onClick={onStartAddAssetFlow}
                 title="Adicionar Ativo"
                 icon={PlusCircle}
             />

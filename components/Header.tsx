@@ -7,19 +7,18 @@ import { Asset } from '../types';
 
 interface HeaderProps {
     portfolioData: Asset[];
-    onAddAsset: () => void;
+    onStartAddAssetFlow: () => void;
     onAiAnalysis: () => void;
     onExportPdf: () => void;
     isExportingPdf: boolean;
     onOptimizePortfolio: () => void;
-    onImportPortfolio: () => void;
     onLogout: () => void;
     onNavigate: (view: string) => void;
     onSelectAsset: (ticker: string) => void;
 }
 
 
-const Header: React.FC<HeaderProps> = ({ portfolioData, onLogout, onNavigate, onSelectAsset, ...props }) => {
+const Header: React.FC<HeaderProps> = ({ portfolioData, onLogout, onNavigate, onSelectAsset, onStartAddAssetFlow, onAiAnalysis, onExportPdf, isExportingPdf, onOptimizePortfolio }) => {
     const { userProfile } = useContext(AuthContext);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -93,68 +92,71 @@ const Header: React.FC<HeaderProps> = ({ portfolioData, onLogout, onNavigate, on
 
     return (
         <>
-            <header className="flex flex-col md:flex-row justify-between items-center gap-4">
-                <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 self-start md:self-center">
-                    Visão Geral
-                </h1>
-                <div className="w-full md:w-auto flex flex-col sm:flex-row items-center gap-2 md:gap-4">
-                    <div className="relative flex-grow w-full sm:w-auto">
-                        <button
-                            onClick={() => setIsSearchModalOpen(true)}
-                            className="w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg py-2.5 pl-10 pr-3 text-sm text-slate-500 dark:text-slate-400 hover:border-sky-500 dark:hover:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-colors"
-                        >
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                            Símbolo, ex. AAPL
-                        </button>
+            <header className="w-full md:w-auto flex flex-col sm:flex-row items-center gap-2 md:gap-4">
+                <div className="relative flex-grow w-full sm:w-auto">
+                    <button
+                        onClick={() => setIsSearchModalOpen(true)}
+                        className="w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg py-2.5 pl-10 pr-3 text-sm text-slate-500 dark:text-slate-400 hover:border-sky-500 dark:hover:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-colors"
+                    >
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        Símbolo, ex. AAPL
+                    </button>
+                </div>
+                <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-center">
+                     <div className="hidden md:block">
+                        <QuickActions 
+                            onStartAddAssetFlow={onStartAddAssetFlow}
+                            onAiAnalysis={onAiAnalysis}
+                            onExportPdf={onExportPdf}
+                            isExportingPdf={isExportingPdf}
+                            onOptimizePortfolio={onOptimizePortfolio}
+                        />
                     </div>
-                    <div className="flex items-center gap-2 self-end sm:self-center">
-                        <QuickActions {...props} />
-                        <div className="relative" ref={dropdownRef}>
-                            <button
-                                id="user-menu-button"
-                                aria-haspopup="true"
-                                aria-expanded={isDropdownOpen}
-                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                className="flex items-center gap-3 pl-2 border-l border-slate-200 dark:border-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors duration-200"
-                            >
-                                {avatarUrl ? (
-                                    <img src={avatarUrl} alt="User Avatar" className="w-10 h-10 rounded-full object-cover" />
-                                ) : (
-                                    <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-                                        <span className="text-lg font-bold text-slate-500 dark:text-slate-400">{getInitials()}</span>
-                                    </div>
-                                )}
-                                <div className="hidden lg:flex items-center gap-1 pr-2">
-                                    <span className="font-semibold text-sm text-slate-800 dark:text-slate-100">{displayName}</span>
-                                    <ChevronDown size={16} className={`text-slate-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                                </div>
-                            </button>
-                            {isDropdownOpen && (
-                                <div
-                                    role="menu"
-                                    aria-orientation="vertical"
-                                    aria-labelledby="user-menu-button"
-                                    className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-20 overflow-hidden animate-fade-in-down origin-top-right"
-                                >
-                                    <button
-                                        role="menuitem"
-                                        tabIndex={-1}
-                                        onClick={() => { onNavigate('conta'); setIsDropdownOpen(false); }}
-                                        className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:bg-slate-100 dark:focus:bg-slate-700 transition-colors"
-                                    >
-                                        <UserIcon size={16} /> Minha Conta
-                                    </button>
-                                    <button
-                                        role="menuitem"
-                                        tabIndex={-1}
-                                        onClick={onLogout}
-                                        className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 focus:outline-none focus:bg-red-50 dark:focus:bg-red-500/10 transition-colors"
-                                    >
-                                        <LogOut size={16} /> Sair
-                                    </button>
+                    <div className="relative" ref={dropdownRef}>
+                        <button
+                            id="user-menu-button"
+                            aria-haspopup="true"
+                            aria-expanded={isDropdownOpen}
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            className="flex items-center gap-3 pl-2 border-l border-slate-200 dark:border-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors duration-200"
+                        >
+                            {avatarUrl ? (
+                                <img src={avatarUrl} alt="User Avatar" className="w-10 h-10 rounded-full object-cover" />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+                                    <span className="text-lg font-bold text-slate-500 dark:text-slate-400">{getInitials()}</span>
                                 </div>
                             )}
-                        </div>
+                            <div className="hidden lg:flex items-center gap-1 pr-2">
+                                <span className="font-semibold text-sm text-slate-800 dark:text-slate-100">{displayName}</span>
+                                <ChevronDown size={16} className={`text-slate-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                            </div>
+                        </button>
+                        {isDropdownOpen && (
+                            <div
+                                role="menu"
+                                aria-orientation="vertical"
+                                aria-labelledby="user-menu-button"
+                                className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-20 overflow-hidden animate-fade-in-down origin-top-right"
+                            >
+                                <button
+                                    role="menuitem"
+                                    tabIndex={-1}
+                                    onClick={() => { onNavigate('conta'); setIsDropdownOpen(false); }}
+                                    className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:bg-slate-100 dark:focus:bg-slate-700 transition-colors"
+                                >
+                                    <UserIcon size={16} /> Minha Conta
+                                </button>
+                                <button
+                                    role="menuitem"
+                                    tabIndex={-1}
+                                    onClick={onLogout}
+                                    className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 focus:outline-none focus:bg-red-50 dark:focus:bg-red-500/10 transition-colors"
+                                >
+                                    <LogOut size={16} /> Sair
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </header>

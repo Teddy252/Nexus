@@ -30,7 +30,20 @@ export interface Asset {
     alertActive?: boolean;
     alertPriceSuperior?: number;
     alertPriceInferior?: number;
+    order_index: number;
+    // Optional fields from Supabase
+    user_id?: string;
+    created_at?: string;
 }
+
+export interface Provento {
+    id: number;
+    assetId: number; // Foreign key to Asset
+    date: string; // YYYY-MM-DD
+    value: number; // Gross value received
+    type: 'Dividendo' | 'JCP' | 'Rendimento';
+}
+
 
 export interface AiPerformer {
     ticker: string;
@@ -54,6 +67,8 @@ export interface AiAnalysis {
     marketSentiment: string;
     futuristicSuggestion: string;
 }
+
+export type OptimizationStrategy = 'Conservador' | 'Balanceado' | 'Agressivo';
 
 export interface PortfolioSuggestion {
     action: 'BUY' | 'SELL' | 'KEEP';

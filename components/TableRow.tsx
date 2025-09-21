@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Asset } from '../types';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, ReferenceLine, Dot } from 'recharts';
 import { Pencil, Trash2, ExternalLink, Bell, BellOff, MoreHorizontal, GripVertical, Copy } from 'lucide-react';
+import { useCurrency } from '../context/CurrencyContext';
 
 interface TableRowProps {
     asset: Asset;
@@ -9,7 +10,9 @@ interface TableRowProps {
     onDelete: (id: number) => void;
     onDuplicate: (id: number) => void;
     onToggleAlert: (id: number) => void;
-    isDragged: boolean;
+    isSelected: boolean;
+    onToggleSelection: (id: number) => void;
+    isBeingDragged: boolean;
     isDragOver: boolean;
     onDragStart: (id: number) => void;
     onDragEnter: (id: number) => void;
@@ -17,9 +20,8 @@ interface TableRowProps {
     onDrop: (id: number) => void;
     scrollToTicker: string | null;
     onScrollComplete: () => void;
+    viewMode: 'detailed' | 'simple';
 }
-
-const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const getTradingViewUrl = (asset: Asset): string | null => {
     const { ticker, pais, categoria } = asset;
@@ -45,12 +47,13 @@ const getTradingViewUrl = (asset: Asset): string | null => {
 };
 
 const TrendTooltip: React.FC<any> = ({ active, payload, label }) => {
+    const { formatCurrency, convertValue } = useCurrency();
     if (active && payload && payload.length) {
         return (
             <div className="bg-white/90 dark:bg-slate-900/90 p-2 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg text-xs z-30">
                 <p className="font-semibold text-slate-600 dark:text-slate-300">{label}</p>
                 <p className="text-slate-800 dark:text-slate-100 font-bold">
-                    {formatCurrency(payload[0].payload.price)}
+                    {formatCurrency(convertValue(payload[0].payload.price))}
                 </p>
             </div>
         );
@@ -59,7 +62,25 @@ const TrendTooltip: React.FC<any> = ({ active, payload, label }) => {
 };
 
 
-const TableRow: React.FC<TableRowProps> = ({ asset, onEdit, onDelete, onDuplicate, onToggleAlert, isDragged, isDragOver, onDragStart, onDragEnter, onDragEnd, onDrop, scrollToTicker, onScrollComplete }) => {
+const TableRow: React.FC<TableRowProps> = ({ 
+    asset, 
+    onEdit, 
+    onDelete, 
+    onDuplicate, 
+    onToggleAlert, 
+    isSelected,
+    onToggleSelection,
+    isBeingDragged, 
+    isDragOver, 
+    onDragStart, 
+    onDragEnter, 
+    onDragEnd, 
+    onDrop, 
+    scrollToTicker, 
+    onScrollComplete,
+    viewMode
+}) => {
+    const { formatCurrency, convertValue } = useCurrency();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const rowRef = useRef<HTMLTableRowElement>(null);
@@ -146,8 +167,13 @@ const TableRow: React.FC<TableRowProps> = ({ asset, onEdit, onDelete, onDuplicat
     
     const rowClasses = [
         "border-b border-slate-100 dark:border-slate-800 transition-colors duration-200 group",
-        isAlertTriggered ? "bg-yellow-100 dark:bg-yellow-900/20" : "hover:bg-slate-100 dark:hover:bg-slate-700/40",
-        isDragged ? 'opacity-30' : '',
+        isBeingDragged
+            ? 'opacity-50 bg-slate-200 dark:bg-slate-700'
+            : isSelected 
+                ? 'bg-sky-50 dark:bg-sky-900/40' 
+                : (isAlertTriggered 
+                    ? "bg-yellow-100 dark:bg-yellow-900/20" 
+                    : "hover:bg-slate-100 dark:hover:bg-slate-700/40"),
         isDragOver ? 'drag-over-indicator' : ''
     ].filter(Boolean).join(" ");
 
@@ -162,60 +188,79 @@ const TableRow: React.FC<TableRowProps> = ({ asset, onEdit, onDelete, onDuplicat
             onDrop={() => onDrop(asset.id)}
             onDragOver={(e) => e.preventDefault()}
         >
-            <td className="p-4 text-center">
-                <div className="flex items-center justify-center text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-move">
-                    <GripVertical className="h-5 w-5" />
+            <td className="p-2 md:p-4">
+                 <div className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => onToggleSelection(asset.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`Selecionar ${asset.ticker}`}
+                        className="h-4 w-4 rounded border-slate-300 dark:border-slate-500 text-sky-600 focus:ring-sky-500 bg-white dark:bg-slate-700 checked:bg-sky-600 dark:checked:bg-sky-500 transition-colors"
+                    />
+                    <div className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-move" title="Arrastar para reordenar">
+                        <GripVertical className="h-5 w-5" />
+                    </div>
                 </div>
             </td>
-            <td className="p-4">
+            <td className="p-2 md:p-4">
                 <div className="font-bold text-base text-slate-800 dark:text-slate-100">{asset.ticker}</div>
                 <div className="text-sm text-slate-500 dark:text-slate-400">{asset.nome} &bull; {asset.pais}</div>
             </td>
-            <td className="p-4 text-center">
+            {viewMode === 'simple' && (
+                <td className="p-2 md:p-4 text-right font-medium text-slate-700 dark:text-slate-200">
+                    {asset.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 6 })}
+                </td>
+            )}
+            <td className="p-2 md:p-4 text-center">
                 <div className="flex items-center justify-center text-sm">
-                    <span className="font-semibold text-base text-slate-800 dark:text-slate-100">{formatCurrency(asset.cotacaoAtual)}</span>
+                    <span className="font-semibold text-base text-slate-800 dark:text-slate-100">{formatCurrency(convertValue(asset.cotacaoAtual))}</span>
                 </div>
             </td>
-            <td className="p-4 text-right font-medium text-slate-700 dark:text-slate-200">
-                {formatCurrency(valorMercado)}
+            <td className="p-2 md:p-4 text-right font-medium text-slate-700 dark:text-slate-200">
+                {formatCurrency(convertValue(valorMercado))}
             </td>
-            <td className={`p-4 text-right font-semibold text-base ${lpColor}`}>
-                {lpSign}{formatCurrency(lucroPrejuizo)}
-            </td>
-            <td className="p-4">
-                <div className="flex items-center justify-end gap-3">
-                    <div className="h-10 w-24">
-                        <ResponsiveContainer width="100%" height="100%">
-                             <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-                                <defs>
-                                    <linearGradient id={`colorTrend-${asset.id}`} x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor={trendColor} stopOpacity={0.4}/>
-                                        <stop offset="95%" stopColor={trendColor} stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
-                                <Tooltip content={<TrendTooltip />} cursor={{ stroke: 'rgba(128, 128, 128, 0.5)', strokeWidth: 1, strokeDasharray: '3 3' }} />
-                                <ReferenceLine y={firstPrice} stroke="#94a3b8" strokeDasharray="3 3" strokeWidth={1.5} />
-                                <Area 
-                                    type="monotone" 
-                                    dataKey="price" 
-                                    stroke={trendColor} 
-                                    strokeWidth={2} 
-                                    fill={`url(#colorTrend-${asset.id})`} 
-                                    name="Preço"
-                                    dot={<CustomizedDot />}
-                                    activeDot={{ r: 4, stroke: trendColor, strokeWidth: 1, fill: '#fff' }}
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <div className={`font-semibold text-sm w-16 text-right ${trendUp ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {percentageChange >= 0 ? '+' : ''}{percentageChange.toFixed(2)}%
-                    </div>
-                </div>
-            </td>
-            <td className="p-4 text-center">
+            {viewMode === 'detailed' && (
+                <>
+                    <td className={`p-2 md:p-4 text-right font-semibold text-base ${lpColor}`}>
+                        {lpSign}{formatCurrency(convertValue(lucroPrejuizo))}
+                    </td>
+                    <td className="p-2 md:p-4">
+                        <div className="flex items-center justify-end gap-3">
+                            <div className="h-10 w-24">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                                        <defs>
+                                            <linearGradient id={`colorTrend-${asset.id}`} x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor={trendColor} stopOpacity={0.4}/>
+                                                <stop offset="95%" stopColor={trendColor} stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <Tooltip content={<TrendTooltip />} cursor={{ stroke: 'rgba(128, 128, 128, 0.5)', strokeWidth: 1, strokeDasharray: '3 3' }} />
+                                        <ReferenceLine y={firstPrice} stroke="#94a3b8" strokeDasharray="3 3" strokeWidth={1.5} />
+                                        <Area 
+                                            type="monotone" 
+                                            dataKey="price" 
+                                            stroke={trendColor} 
+                                            strokeWidth={2} 
+                                            fill={`url(#colorTrend-${asset.id})`} 
+                                            name="Preço"
+                                            dot={<CustomizedDot />}
+                                            activeDot={{ r: 4, stroke: trendColor, strokeWidth: 1, fill: '#fff' }}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className={`font-semibold text-sm w-16 text-right ${trendUp ? 'text-emerald-500' : 'text-red-500'}`}>
+                                {percentageChange >= 0 ? '+' : ''}{percentageChange.toFixed(2)}%
+                            </div>
+                        </div>
+                    </td>
+                </>
+            )}
+            <td className="p-2 md:p-4 text-center">
                 <div className="relative flex items-center justify-center" ref={menuRef}>
-                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} title="Mais ações" className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                         <MoreHorizontal className="h-5 w-5" />
                     </button>
                      {isMenuOpen && (
