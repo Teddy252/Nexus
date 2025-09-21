@@ -10,7 +10,7 @@ interface AuthContextType {
     signUpWithEmail: typeof supabase.auth.signUp;
     signInWithGoogle: () => ReturnType<typeof supabase.auth.signInWithOAuth>;
     logout: () => ReturnType<typeof supabase.auth.signOut>;
-    updateUserProfile: (updates: { first_name?: string; last_name?: string }) => Promise<void>;
+    updateUserProfile: (updates: { first_name?: string; last_name?: string, avatar_url?: string; }) => Promise<void>;
     uploadAvatar: (file: File) => Promise<void>;
     updateUserPassword: (password: string) => Promise<{ error: Error | null }>;
     updateUserEmail: (email: string) => Promise<{ error: Error | null }>;
@@ -40,15 +40,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
      const updateUserProfile = async (updates: Partial<UserProfile>) => {
         if (!currentUser) throw new Error("Usuário não autenticado.");
 
+        const upsertData = {
+            id: currentUser.id,
+            ...updates,
+        };
+
         const { data, error } = await supabase
             .from('profiles')
-            .update(updates)
-            .eq('id', currentUser.id)
+            .upsert(upsertData)
             .select()
             .single();
 
         if (error) {
-            console.error("Erro ao atualizar perfil:", error);
+            console.error("Erro ao atualizar/criar perfil:", error);
             throw error;
         }
         

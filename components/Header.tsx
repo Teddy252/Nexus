@@ -87,7 +87,10 @@ const Header: React.FC<HeaderProps> = ({ portfolioData, onLogout, onNavigate, on
         };
     }, [isDropdownOpen]);
 
-    const displayName = userProfile?.first_name ? `${userProfile.first_name} ${userProfile.last_name}` : 'Usuário';
+    const displayName = [userProfile?.first_name, userProfile?.last_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim() || 'Usuário';
     const avatarUrl = userProfile?.avatar_url;
 
     return (

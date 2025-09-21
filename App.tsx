@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import Dashboard from './Dashboard';
 import { ThemeProvider } from './context/ThemeContext';
 import { CurrencyProvider } from './context/CurrencyContext';
+import { LanguageProvider } from './context/LanguageContext';
 import SideNavBar from './components/SideNavBar';
 import AuthPage from './components/AuthPage';
 import { AuthContext } from './context/AuthContext';
@@ -702,14 +703,16 @@ const App: React.FC = () => {
         <ThemeProvider>
             <AuthProvider>
                 <CurrencyProvider>
-                    <AuthContext.Consumer>
-                        {({ currentUser, logout }) => {
-                            if (currentUser) {
-                                return <MainApp onLogout={logout} />;
-                            }
-                            return <AuthPage />;
-                        }}
-                    </AuthContext.Consumer>
+                    <LanguageProvider>
+                        <AuthContext.Consumer>
+                            {({ currentUser, logout }) => {
+                                if (currentUser) {
+                                    return <MainApp onLogout={logout} />;
+                                }
+                                return <AuthPage />;
+                            }}
+                        </AuthContext.Consumer>
+                    </LanguageProvider>
                 </CurrencyProvider>
             </AuthProvider>
         </ThemeProvider>

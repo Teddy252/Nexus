@@ -1,11 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Asset, AiAnalysis, NewsItem, AiOptimizationAnalysis, SimulatedSale, TaxSummary, OptimizationStrategy } from '../types';
 
-if (!process.env.API_KEY) {
-    console.warn("API_KEY environment variable not set. AI features will not work.");
-}
+// Robust check for API_KEY to prevent crashing the app.
+const API_KEY = process.env.API_KEY;
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+let ai: GoogleGenAI | null = null;
+if (API_KEY) {
+    ai = new GoogleGenAI({ apiKey: API_KEY });
+} else {
+    console.error("FATAL: API_KEY environment variable not set. AI features will be disabled.");
+}
 
 const assetDetailsSchema = {
     type: Type.OBJECT,
@@ -17,9 +21,16 @@ const assetDetailsSchema = {
     required: ["nome", "categoria", "pais"],
 };
 
+const throwErrorIfAiDisabled = () => {
+    if (!ai) {
+        throw new Error("O serviço de IA não está disponível. Verifique se a chave de API está configurada corretamente no ambiente de deploy.");
+    }
+}
+
 export const getAssetDetails = async (ticker: string) => {
+    throwErrorIfAiDisabled();
     const prompt = `Dado o ticker de ativo financeiro '${ticker}', forneça seu nome completo, categoria e país de origem. Responda em português do Brasil.`;
-    const response = await ai.models.generateContent({
+    const response = await ai!.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,
         config: {
@@ -43,9 +54,10 @@ const brokerageSchema = {
 };
 
 export const getBrokerageSuggestions = async (country: string): Promise<string[]> => {
+    throwErrorIfAiDisabled();
     const prompt = `Liste as 5 corretoras de investimentos mais populares no seguinte país: ${country}. Responda em português do Brasil.`;
     try {
-        const response = await ai.models.generateContent({
+        const response = await ai!.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
@@ -120,6 +132,7 @@ const analysisSchema = {
 
 
 export const getPortfolioAnalysis = async (portfolio: Asset[]): Promise<AiAnalysis> => {
+    throwErrorIfAiDisabled();
     const simplifiedPortfolio = portfolio.map(({ ticker, nome, categoria, pais, precoCompra, cotacaoAtual, quantidade }) => ({
         ticker,
         nome,
@@ -147,7 +160,7 @@ export const getPortfolioAnalysis = async (portfolio: Asset[]): Promise<AiAnalys
         ${JSON.stringify(simplifiedPortfolio, null, 2)}
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await ai!.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,
         config: {
@@ -187,6 +200,7 @@ const optimizationSchema = {
 
 
 export const getPortfolioOptimization = async (portfolio: Asset[], strategy: OptimizationStrategy): Promise<AiOptimizationAnalysis> => {
+     throwErrorIfAiDisabled();
      const simplifiedPortfolio = portfolio.map(({ ticker, nome, categoria, pais, precoCompra, cotacaoAtual, quantidade, riskProfile }) => ({
         ticker,
         nome,
@@ -226,7 +240,7 @@ export const getPortfolioOptimization = async (portfolio: Asset[], strategy: Opt
         ${JSON.stringify(simplifiedPortfolio, null, 2)}
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await ai!.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,
         config: {
@@ -241,10 +255,11 @@ export const getPortfolioOptimization = async (portfolio: Asset[], strategy: Opt
 
 
 export const getDividendYield = async (ticker: string, country: string): Promise<number> => {
+    throwErrorIfAiDisabled();
     const prompt = `Qual é o dividend yield anual para o ativo '${ticker}' do país '${country}'? Responda APENAS com o número percentual (ex: 5.42). Se não for aplicável ou não encontrar, responda '0'.`;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await ai!.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
         });
@@ -279,6 +294,7 @@ const newsSchema = {
 };
 
 export const getRelevantNews = async (query: string): Promise<NewsItem[]> => {
+    throwErrorIfAiDisabled();
     const prompt = `
         Aja como um curador de notícias financeiras.
         Encontre de 5 a 10 das notícias mais recentes e relevantes (últimas 48 horas) sobre o seguinte tópico ou ativos: "${query}".
@@ -288,7 +304,7 @@ export const getRelevantNews = async (query: string): Promise<NewsItem[]> => {
     `;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await ai!.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
@@ -309,8 +325,9 @@ export const getRelevantNews = async (query: string): Promise<NewsItem[]> => {
 
 
 export const generateAppIcon = async (prompt: string): Promise<string> => {
+    throwErrorIfAiDisabled();
     try {
-        const response = await ai.models.generateImages({
+        const response = await ai!.models.generateImages({
             model: 'imagen-4.0-generate-001',
             prompt: prompt,
             config: {
@@ -344,6 +361,7 @@ const taxExplanationSchema = {
 };
 
 export const getTaxExplanation = async (summary: TaxSummary, sales: SimulatedSale[]): Promise<string> => {
+    throwErrorIfAiDisabled();
     const simplifiedSales = sales.map(s => ({
         ticker: s.asset.ticker,
         categoria: s.asset.categoria,
@@ -380,7 +398,7 @@ export const getTaxExplanation = async (summary: TaxSummary, sales: SimulatedSal
     `;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await ai!.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
@@ -424,6 +442,7 @@ const assetExtractionSchema = {
 
 
 export const extractAssetsFromFileContent = async (fileContent: string): Promise<Partial<Asset>[]> => {
+    throwErrorIfAiDisabled();
     const prompt = `
         Aja como um assistente inteligente de importação de dados financeiros.
         Analise o conteúdo do arquivo de portfólio de um usuário fornecido abaixo. O conteúdo pode ser um CSV ou um JSON.
@@ -444,7 +463,7 @@ export const extractAssetsFromFileContent = async (fileContent: string): Promise
     `;
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await ai!.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {

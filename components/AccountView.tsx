@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Sun, Moon, Monitor, PiggyBank, Landmark, Bell, Globe2, Fingerprint, CircleDollarSign, Palette, ChevronRight, User, ShieldCheck, X, Loader2, AlertTriangle, Mail } from 'lucide-react';
 import ProfileModal from './ProfileModal';
 import EmailUpdateModal from './EmailUpdateModal';
@@ -115,6 +116,7 @@ const AccountView: React.FC = () => {
     const { theme, setTheme } = useContext(ThemeContext);
     const { selectedCurrency, setCurrency } = useCurrency();
     const { currentUser } = useContext(AuthContext);
+    const { locale, setLocale } = useLanguage();
 
     const [isProfileModalOpen, setProfileModalOpen] = useState(false);
     const [isSecurityModalOpen, setSecurityModalOpen] = useState(false);
@@ -122,44 +124,64 @@ const AccountView: React.FC = () => {
     const [biometricEnabled, setBiometricEnabled] = useState(true);
 
     const currencyMap = { BRL: 'Real (BRL)', USD: 'US Dollar (USD)', EUR: 'Euro (EUR)' };
-    const themeMap: { [key: string]: string } = { light: 'Light', dark: 'Dark', system: 'System' };
+    const themeMap: { [key: string]: string } = { light: 'Claro', dark: 'Escuro', system: 'Sistema' };
+    const languageMap: { [key: string]: string } = {
+        'pt-BR': 'Português (Brasil)',
+        'en-US': 'English (US)',
+        'es-ES': 'Español (España)',
+        'fr-FR': 'Français (France)',
+        'de-DE': 'Deutsch (Deutschland)',
+        'it-IT': 'Italiano (Italia)',
+        'ja-JP': '日本語 (日本)',
+        'ko-KR': '한국어 (대한민국)',
+        'zh-CN': '中文 (简体)',
+    };
     
     return (
         <div className="max-w-3xl mx-auto pb-10">
             <header className="mb-6 md:mb-8">
-                <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Settings</h1>
+                <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Configurações</h1>
             </header>
 
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 divide-y divide-slate-200 dark:divide-slate-700">
-                <SettingsRow icon={User} title="Profile" subtitle="Manage your name, avatar, and personal info" onClick={() => setProfileModalOpen(true)}>
+                <SettingsRow icon={User} title="Perfil" subtitle="Gerencie seu nome, avatar e informações pessoais" onClick={() => setProfileModalOpen(true)}>
                     <ChevronRight className="h-5 w-5 text-slate-400" />
                 </SettingsRow>
-                <SettingsRow icon={Mail} title="Email" subtitle={currentUser?.email} onClick={() => setEmailModalOpen(true)}>
+                <SettingsRow icon={Mail} title="E-mail" subtitle={currentUser?.email} onClick={() => setEmailModalOpen(true)}>
                     <ChevronRight className="h-5 w-5 text-slate-400" />
                 </SettingsRow>
-                <SettingsRow icon={ShieldCheck} title="Security" subtitle="Manage your password" onClick={() => setSecurityModalOpen(true)}>
+                <SettingsRow icon={ShieldCheck} title="Segurança" subtitle="Gerencie sua senha" onClick={() => setSecurityModalOpen(true)}>
                     <ChevronRight className="h-5 w-5 text-slate-400" />
                 </SettingsRow>
-                <SettingsRow icon={PiggyBank} title="Savings settings" subtitle="Interest payout in the same currency">
+                <SettingsRow icon={PiggyBank} title="Configurações de Poupança" subtitle="Pagamento de juros na mesma moeda">
                     <ChevronRight className="h-5 w-5 text-slate-400" />
                 </SettingsRow>
-                <SettingsRow icon={Landmark} title="Credit Line settings" subtitle="Manage your loan">
+                <SettingsRow icon={Landmark} title="Configurações de Linha de Crédito" subtitle="Gerencie seu empréstimo">
                     <ChevronRight className="h-5 w-5 text-slate-400" />
                 </SettingsRow>
-                <SettingsRow icon={Bell} title="Notifications" subtitle="Manage your push notification preferences">
+                <SettingsRow icon={Bell} title="Notificações" subtitle="Gerencie suas preferências de notificação">
                     <ChevronRight className="h-5 w-5 text-slate-400" />
                 </SettingsRow>
-                <SettingsRow icon={Globe2} title="Language">
-                    <span className="font-medium text-slate-600 dark:text-slate-300">English</span>
-                    <ChevronRight className="h-5 w-5 text-slate-400" />
+                <SettingsRow icon={Globe2} title="Idioma">
+                    <select
+                        value={locale}
+                        onChange={(e) => setLocale(e.target.value as any)}
+                        className="font-medium bg-transparent text-slate-600 dark:text-slate-300 text-right focus:outline-none cursor-pointer pr-8 -mr-2"
+                        style={{ WebkitAppearance: 'none', appearance: 'none', MozAppearance: 'none' }}
+                    >
+                        {Object.entries(languageMap).map(([key, value]) => (
+                            <option key={key} value={key}>{value}</option>
+                        ))}
+                    </select>
+                    <ChevronRight className="h-5 w-5 text-slate-400 pointer-events-none -ml-6" />
                 </SettingsRow>
-                <SettingsRow icon={Fingerprint} title="Biometric authentication" subtitle="Use biometrics to log in to your account">
+                <SettingsRow icon={Fingerprint} title="Autenticação biométrica" subtitle="Use biometria para entrar na sua conta">
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" checked={biometricEnabled} onChange={() => setBiometricEnabled(!biometricEnabled)} className="sr-only peer" />
                         <div className="w-11 h-6 bg-slate-200 dark:bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
                     </label>
                 </SettingsRow>
-                <SettingsRow icon={CircleDollarSign} title="Display currency">
+                <SettingsRow icon={CircleDollarSign} title="Moeda de exibição">
                     <select
                         value={selectedCurrency}
                         onChange={(e) => setCurrency(e.target.value as 'BRL' | 'USD' | 'EUR')}
@@ -172,7 +194,7 @@ const AccountView: React.FC = () => {
                     </select>
                     <ChevronRight className="h-5 w-5 text-slate-400 pointer-events-none -ml-6" />
                 </SettingsRow>
-                <SettingsRow icon={Palette} title="Appearance">
+                <SettingsRow icon={Palette} title="Aparência">
                      <select
                         value={theme}
                         onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
@@ -188,8 +210,8 @@ const AccountView: React.FC = () => {
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 divide-y divide-slate-200 dark:divide-slate-700 mt-8">
-                <InfoRow title="App Version" value="5.25.0" />
-                <InfoRow title="Build Number" value="250909001" />
+                <InfoRow title="Versão do App" value="5.25.0" />
+                <InfoRow title="Número da Build" value="250909001" />
             </div>
 
             <ProfileModal isOpen={isProfileModalOpen} onClose={() => setProfileModalOpen(false)} />
