@@ -1,7 +1,8 @@
-import { LayoutDashboard, Wallet, FileText, Calculator, BrainCircuit, User, Newspaper, Landmark, PieChart } from 'lucide-react';
+import { LayoutDashboard, Wallet, FileText, Calculator, BrainCircuit, User, Newspaper, Landmark, PieChart, Bell, Rocket } from 'lucide-react';
 
 export const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' },
+    { name: 'Primeiros Passos', icon: Rocket, key: 'novatos' },
     { name: 'Carteira', icon: Wallet, key: 'carteira' },
     { name: 'Proventos', icon: Landmark, key: 'proventos' },
     { name: 'Análise', icon: PieChart, key: 'analise' },
@@ -9,5 +10,6 @@ export const navItems = [
     { name: 'Declaração', icon: FileText, key: 'declaracao' },
     { name: 'IR Mensal', icon: Calculator, key: 'ir_mensal' },
     { name: 'IA', icon: BrainCircuit, key: 'ia' },
+    { name: 'Notificações', icon: Bell, key: 'notificacoes' },
     { name: 'Conta', icon: User, key: 'conta' },
 ];

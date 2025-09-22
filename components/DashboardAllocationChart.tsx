@@ -7,6 +7,7 @@ import { useCurrency } from '../context/CurrencyContext';
 interface DashboardAllocationChartProps {
     portfolioData: Asset[];
     onNavigate: (view: string) => void;
+    showNavigationLink?: boolean;
 }
 
 const CHART_COLORS = ['#0f172a', '#1d4ed8', '#0ea5e9', '#06b6d4', '#14b8a6', '#34d399', '#64748b', '#94a3b8'];
@@ -28,7 +29,7 @@ const CustomTooltipContent: React.FC<any> = ({ active, payload }) => {
 };
 
 
-const DashboardAllocationChart: React.FC<DashboardAllocationChartProps> = ({ portfolioData, onNavigate }) => {
+const DashboardAllocationChart: React.FC<DashboardAllocationChartProps> = ({ portfolioData, onNavigate, showNavigationLink = true }) => {
     const { formatCurrency, convertValue } = useCurrency();
     const [activeTab, setActiveTab] = useState<'categoria' | 'pais'>('categoria');
     const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -124,10 +125,12 @@ const DashboardAllocationChart: React.FC<DashboardAllocationChartProps> = ({ por
                     })}
                 </div>
             </div>
-
-             <button onClick={() => onNavigate('analise')} className="mt-4 text-sm font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center justify-center gap-1 self-center">
-                Ver análise completa <ChevronsRight className="h-4 w-4" />
-            </button>
+            
+            {showNavigationLink && (
+                <button onClick={() => onNavigate('analise')} className="mt-4 text-sm font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center justify-center gap-1 self-center">
+                    Ver análise completa <ChevronsRight className="h-4 w-4" />
+                </button>
+            )}
         </div>
     );
 };

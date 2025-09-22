@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { supabase } from '../services/supabaseClient';
-import { AuthChangeEvent, Session, User, GoTrueAdminApi } from '@supabase/supabase-js';
-import { UserProfile } from '../types';
+import { supabase } from '../services/supabaseClient.ts';
+import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
+import { UserProfile } from '../types.ts';
 
 interface AuthContextType {
     currentUser: User | null;
@@ -88,15 +88,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     useEffect(() => {
         const getSessionAndProfile = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            setCurrentUser(session?.user ?? null);
-            if (session?.user) {
-                const profile = await fetchUserProfile(session.user);
-                setUserProfile(profile);
-            } else {
+            try {
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                if(sessionError) throw sessionError;
+
+                setCurrentUser(session?.user ?? null);
+                if (session?.user) {
+                    const profile = await fetchUserProfile(session.user);
+                    setUserProfile(profile);
+                } else {
+                    setUserProfile(null);
+                }
+            } catch (error) {
+                 console.error("Error getting session and profile:", error);
+                // Ensure a clean state on error
+                setCurrentUser(null);
                 setUserProfile(null);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
         
         getSessionAndProfile();

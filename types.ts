@@ -27,6 +27,7 @@ export interface Asset {
     riskProfile: 'Seguro' | 'Moderado' | 'Arriscado';
     historicoPreco: number[];
     dividendYield: number; // Annual yield, e.g., 0.05 for 5%
+    moedaCompra: 'BRL' | 'USD' | 'USDT';
     alertActive?: boolean;
     alertPriceSuperior?: number;
     alertPriceInferior?: number;
@@ -121,7 +122,7 @@ export interface DashboardWidget {
 export interface SimulatedSale {
     id: number;
     asset: Asset;
-    date: string; // YYYY-MM-DD
+    date: string; // YYY-MM-DD
     quantity: number;
     salePrice: number;
     profit: number;
@@ -142,6 +143,28 @@ export interface TaxSummary {
 }
 
 export interface Notification {
-    id: number;
+    id: string;
+    type: 'price_alert' | 'dividend_payment' | 'system_message';
+    title: string;
     message: string;
+    isRead: boolean;
+    createdAt: string; // ISO Date String
+    assetId?: number; // Optional link to an asset
+    user_id?: string;
+}
+
+export interface Message {
+    sender: 'user' | 'ai';
+    text: string;
+    type?: 'text' | 'analysis' | 'optimization' | 'news';
+    data?: any;
+    isLoading?: boolean;
+}
+
+export type InvestorProfile = 'Conservador' | 'Moderado' | 'Agressivo' | null;
+
+export interface IrInfo {
+    group: string;
+    code: string;
+    description: string;
 }

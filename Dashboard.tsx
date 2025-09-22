@@ -1,16 +1,15 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { Asset, KpiConfig } from './types';
+import { Asset, KpiConfig, Notification } from './types.ts';
 import html2canvas from 'html2canvas';
-import { generatePortfolioPdf } from './services/pdfService';
-import { Scale, BarChart3, TrendingUp, TrendingDown, Percent, Edit, Save, X, GripVertical, PlusCircle, XCircle } from 'lucide-react';
+import { generatePortfolioPdf } from './services/pdfService.ts';
+import { Scale, BarChart3, TrendingUp, TrendingDown, Percent, Edit, Save, X, GripVertical, PlusCircle, XCircle, BarChart } from 'lucide-react';
 
-import Header from './components/Header';
-import PatrimonialEvolutionChart from './components/PatrimonialEvolutionChart';
-import TickerTape from './components/TickerTape';
-import MarketPulse from './components/MarketPulse';
-import DashboardAllocationChart from './components/DashboardAllocationChart';
-import AddAssetButton from './components/AddAssetButton';
-import KpiCard from './components/KpiCard';
+import Header from './components/Header.tsx';
+import PatrimonialEvolutionChart from './components/PatrimonialEvolutionChart.tsx';
+import TickerTape from './components/TickerTape.tsx';
+import MarketPulse from './components/MarketPulse.tsx';
+import DashboardAllocationChart from './components/DashboardAllocationChart.tsx';
+import KpiCard from './components/KpiCard.tsx';
 
 const ALL_KPIS: KpiConfig[] = [
     { id: 'patrimonioTotal', title: 'Patrimônio Total', icon: Scale, description: 'Valor total atual da sua carteira.' },
@@ -29,7 +28,7 @@ type WidgetId =
 
 interface WidgetConfig {
     id: WidgetId;
-    colSpan: 3 | 4 | 6 | 8 | 12; // Using specific numbers for Tailwind CSS class generation
+    colSpan: 3 | 4 | 6 | 8 | 12;
 }
 
 const ALL_POSSIBLE_WIDGETS: WidgetConfig[] = [
@@ -37,27 +36,32 @@ const ALL_POSSIBLE_WIDGETS: WidgetConfig[] = [
     { id: 'lucroPrejuizoPercentual', colSpan: 3 }, { id: 'proventosAnuaisEstimados', colSpan: 3 },
     { id: 'totalGanhos', colSpan: 3 }, { id: 'totalPerdas', colSpan: 3 },
     { id: 'totalInvestido', colSpan: 3 },
-    { id: 'patrimonialEvolution', colSpan: 12 }, { id: 'dashboardAllocation', colSpan: 8 },
+    { id: 'patrimonialEvolution', colSpan: 12 }, { id: 'dashboardAllocation', colSpan: 12 },
     { id: 'marketPulse', colSpan: 4 },
 ];
 
 const initialWidgets: WidgetConfig[] = [
     { id: 'patrimonioTotal', colSpan: 3 }, { id: 'lucroPrejuizoTotal', colSpan: 3 },
     { id: 'lucroPrejuizoPercentual', colSpan: 3 }, { id: 'proventosAnuaisEstimados', colSpan: 3 },
-    { id: 'patrimonialEvolution', colSpan: 12 }, { id: 'dashboardAllocation', colSpan: 8 },
+    { id: 'patrimonialEvolution', colSpan: 12 },
+    { id: 'dashboardAllocation', colSpan: 8 },
     { id: 'marketPulse', colSpan: 4 },
 ];
 
 interface DashboardProps {
     portfolioData: Asset[];
     isDataLoaded: boolean;
-    onStartAddAssetFlow: () => void;
     onAiAnalysis: () => void;
     onOptimizePortfolio: () => void;
     onLogout: () => void;
     onNavigate: (view: string) => void;
     derivedData: { [key: string]: number; };
     onSelectAsset: (ticker: string) => void;
+    notifications: Notification[];
+    unreadCount: number;
+    onMarkAsRead: (id: string) => void;
+    onMarkAllAsRead: () => void;
+    onNotificationClick: (notification: Notification) => void;
 }
 
 const getColSpanClass = (span: number) => {
@@ -69,14 +73,30 @@ const getColSpanClass = (span: number) => {
 };
 
 const Dashboard: React.FC<DashboardProps> = ({
-    portfolioData, isDataLoaded, onStartAddAssetFlow, onAiAnalysis,
-    onOptimizePortfolio, onLogout, onNavigate, derivedData, onSelectAsset
+    portfolioData, isDataLoaded, onAiAnalysis,
+    onOptimizePortfolio, onLogout, onNavigate, derivedData, onSelectAsset,
+    notifications, unreadCount, onMarkAsRead, onMarkAllAsRead, onNotificationClick
 }) => {
     const evolutionChartRef = useRef<HTMLDivElement>(null);
     const [isExportingPdf, setIsExportingPdf] = useState(false);
     const [isEditLayoutMode, setIsEditLayoutMode] = useState(false);
-    const [widgets, setWidgets] = useState<WidgetConfig[]>(initialWidgets);
-    const [originalWidgets, setOriginalWidgets] = useState<WidgetConfig[]>(initialWidgets);
+    
+    const [widgets, setWidgets] = useState<WidgetConfig[]>(() => {
+        try {
+            const savedLayout = localStorage.getItem('dashboardLayout');
+            if (savedLayout) {
+                const parsed = JSON.parse(savedLayout);
+                if (Array.isArray(parsed) && parsed.every(w => w.id && w.colSpan)) {
+                    return parsed;
+                }
+            }
+        } catch (error) {
+            console.error("Failed to parse dashboard layout from localStorage", error);
+        }
+        return initialWidgets;
+    });
+
+    const [originalWidgets, setOriginalWidgets] = useState<WidgetConfig[]>(widgets);
     const [draggedWidgetId, setDraggedWidgetId] = useState<WidgetId | null>(null);
 
     const hiddenWidgets = useMemo(() =>
@@ -94,7 +114,14 @@ const Dashboard: React.FC<DashboardProps> = ({
         setIsEditLayoutMode(false);
     };
 
-    const handleSaveLayout = () => setIsEditLayoutMode(false);
+    const handleSaveLayout = () => {
+        setIsEditLayoutMode(false);
+        try {
+            localStorage.setItem('dashboardLayout', JSON.stringify(widgets));
+        } catch (error) {
+            console.error("Failed to save dashboard layout to localStorage", error);
+        }
+    };
     
     const handleHideWidget = (id: WidgetId) => setWidgets(prev => prev.filter(w => w.id !== id));
     const handleShowWidget = (id: WidgetId) => {
@@ -167,7 +194,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     if (!isDataLoaded) {
         return (
              <div className="animate-pulse">
-                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-10"></div>
+                <div className="hidden md:block h-10 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-10"></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                     <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
                     <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
@@ -184,7 +211,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     return (
         <div className="space-y-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="hidden md:flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                  <div className="flex items-center gap-4">
                     <h1 className="text-3xl lg:text-4xl font-bold text-slate-800 dark:text-slate-100">Visão Geral</h1>
                     {!isEditLayoutMode && (
@@ -194,16 +221,18 @@ const Dashboard: React.FC<DashboardProps> = ({
                     )}
                 </div>
                 <Header 
-                    portfolioData={portfolioData} onStartAddAssetFlow={onStartAddAssetFlow} onAiAnalysis={onAiAnalysis}
+                    portfolioData={portfolioData} onStartAddAssetFlow={() => {}} onAiAnalysis={onAiAnalysis}
                     onExportPdf={handleExportPdf} isExportingPdf={isExportingPdf} onOptimizePortfolio={onOptimizePortfolio}
                     onLogout={onLogout} onNavigate={onNavigate} onSelectAsset={onSelectAsset}
+                    notifications={notifications} unreadCount={unreadCount} onMarkAsRead={onMarkAsRead} onMarkAllAsRead={onMarkAllAsRead}
+                    onNotificationClick={onNotificationClick}
                 />
             </div>
             <div className="hidden md:block"><TickerTape assets={portfolioData} /></div>
 
             <div className="space-y-6">
                 {isEditLayoutMode && (
-                    <div className="flex justify-end items-center gap-2 p-3 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-900/30 rounded-lg animate-fade-in-down">
+                    <div className="flex flex-wrap justify-end items-center gap-2 p-3 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-900/30 rounded-lg animate-fade-in-down">
                          <p className="text-sm font-semibold text-sky-800 dark:text-sky-200 mr-auto">Arraste os widgets para reordenar.</p>
                          <button onClick={handleCancelEditMode} className="flex items-center gap-1.5 py-1.5 px-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-md font-semibold text-slate-700 dark:text-slate-200 text-sm transition-colors">
                             <X className="h-4 w-4" /> Cancelar
@@ -214,7 +243,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
                     {widgets.map(widget => {
                         const colSpanClass = getColSpanClass(widget.colSpan);
                         const isBeingDragged = draggedWidgetId === widget.id;
@@ -268,7 +297,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                 )}
             </div>
-             <AddAssetButton onClick={onStartAddAssetFlow} />
         </div>
     );
 };

@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Asset } from '../types';
+import { Asset, InvestorProfile, IrInfo } from '../types.ts';
 
 const formatCurrency = (val: number) => `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -342,4 +342,135 @@ export const generateDarfPdf = async (period: string, taxDue: number): Promise<v
     doc.text("Este é um documento simulado gerado pelo Nexus para auxiliar no pagamento. Verifique todos os dados antes de efetuar o pagamento.", 105, 280, { align: 'center' });
 
     doc.save(`darf-simulado-${period.replace('-', '_')}-nexus.pdf`);
-}
+};
+
+export const generateModelPortfolioPdf = (portfolio: Asset[], profile: InvestorProfile): void => {
+    const doc = new jsPDF();
+    const totalValue = portfolio.reduce((sum, asset) => sum + asset.precoCompra * asset.quantidade, 0);
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor('#1e293b');
+    doc.text('Sua Carteira Modelo - Nexus', 14, 22);
+    doc.setFontSize(14);
+    doc.setTextColor('#334155');
+    doc.text(`Perfil do Investidor: ${profile}`, 14, 30);
+
+    // Summary
+    doc.setFontSize(12);
+    doc.setTextColor('#1e293b');
+    doc.text('Resumo da Alocação', 14, 45);
+    doc.setLineWidth(0.5);
+    doc.line(14, 47, 196, 47);
+
+    const tableData = portfolio.map(asset => {
+        const allocation = ((asset.precoCompra * asset.quantidade) / totalValue) * 100;
+        return [
+            asset.ticker,
+            asset.nome,
+            `${allocation.toFixed(2)}%`,
+            formatCurrency(asset.precoCompra * asset.quantidade)
+        ];
+    });
+
+    autoTable(doc, {
+        head: [['Ativo', 'Descrição', 'Alocação (%)', 'Valor Simulado']],
+        body: tableData,
+        startY: 50,
+        theme: 'grid',
+        headStyles: {
+            fillColor: '#1e293b',
+            textColor: '#ffffff',
+            fontSize: 10,
+        },
+        styles: {
+            fontSize: 9,
+            cellPadding: 3,
+        },
+        columnStyles: {
+            2: { halign: 'right' },
+            3: { halign: 'right' },
+        },
+    });
+
+    // Disclaimer
+    const finalY = (doc as any).lastAutoTable.finalY;
+    doc.setFontSize(9);
+    doc.setTextColor('#64748b'); // slate-500
+    doc.text(
+        'Este é um relatório educacional gerado com base no seu perfil. Os ativos são exemplos e não constituem uma recomendação de investimento.',
+        14,
+        finalY + 15,
+        { maxWidth: 182 }
+    );
+
+    addFooter(doc, `Modelo ${profile}`);
+    doc.save(`carteira_modelo_${profile}.pdf`);
+};
+
+export const generateAnnualTaxReportPdf = (portfolio: Asset[], irInfo: Record<string, IrInfo>, year: number): void => {
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor('#1e293b');
+    doc.text(`Relatório de Bens e Direitos ${year}`, 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor('#334155');
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 29);
+
+    const totalAcquisitionCost = portfolio.reduce((sum, asset) => sum + (asset.precoCompra * asset.quantidade), 0);
+    doc.setFontSize(12);
+    doc.text(`Custo Total de Aquisição em 31/12/${year}: ${formatCurrency(totalAcquisitionCost)}`, 14, 40);
+
+    const tableData = portfolio.map(asset => {
+        const info = irInfo[asset.categoria];
+        const custoTotal = asset.precoCompra * asset.quantidade;
+        const descriptionTemplate = info?.description || "[TICKER] - [QUANTIDADE] unidades adquiridas ao custo total de [CUSTO_TOTAL].";
+        const finalDescription = descriptionTemplate
+            .replace(/\[TICKER\]/g, asset.ticker)
+            .replace(/\[NOME_EMPRESA\]/g, asset.nome)
+            .replace(/\[QUANTIDADE\]/g, asset.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 6 }))
+            .replace(/\[CUSTO_TOTAL\]/g, `R$ ${custoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
+            .replace(/\[CORRETORA\]/g, asset.corretora);
+        
+        return [
+            info?.group || 'Outros',
+            info?.code || 'N/A',
+            `${asset.ticker} - ${asset.nome}`,
+            finalDescription,
+            formatCurrency(custoTotal),
+        ];
+    });
+
+    autoTable(doc, {
+        head: [['Grupo', 'Código', 'Ativo', 'Discriminação', `Situação em 31/12/${year}`]],
+        body: tableData,
+        startY: 50,
+        theme: 'grid',
+        headStyles: {
+            fillColor: '#1e293b',
+            textColor: '#ffffff',
+            fontSize: 9,
+        },
+        styles: {
+            fontSize: 8,
+            cellPadding: 2,
+            valign: 'middle',
+        },
+        columnStyles: {
+            3: { cellWidth: 88 }, // Discrimination column
+            4: { halign: 'right' },
+        },
+        didDrawPage: (data) => {
+            if (data.pageNumber > 1) {
+                doc.setFontSize(12);
+                doc.setTextColor('#1e293b');
+                doc.text('Relatório de Bens e Direitos (continuação)', 14, 22);
+            }
+        }
+    });
+    
+    addFooter(doc, `Bens e Direitos ${year}`);
+    doc.save(`relatorio_bens_e_direitos_${year}.pdf`);
+};

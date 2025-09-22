@@ -3,7 +3,6 @@ import { Asset } from '../types';
 import PortfolioTable from './PortfolioTable';
 import { WalletCards, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
-import AddAssetButton from './AddAssetButton';
 
 interface CarteiraViewProps {
     portfolioData: Asset[];
@@ -17,7 +16,6 @@ interface CarteiraViewProps {
     onToggleAllAssets: (assetIds: number[], areAllCurrentlySelected: boolean) => void;
     scrollToTicker: string | null;
     onScrollComplete: () => void;
-    onStartAddAssetFlow: () => void;
 }
 
 const InfoCard: React.FC<{ icon: React.ElementType; title: string; value: string; subtitle?: string; color: string }> = ({ icon: Icon, title, value, subtitle, color }) => {
@@ -105,8 +103,6 @@ const CarteiraView: React.FC<CarteiraViewProps> = (props) => {
                 onToggleAssetSelection={props.onToggleAssetSelection}
                 onToggleAllAssets={props.onToggleAllAssets}
             />
-
-            <AddAssetButton onClick={props.onStartAddAssetFlow} />
         </div>
     );
 };

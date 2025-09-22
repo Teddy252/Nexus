@@ -3,7 +3,6 @@ import { Asset, Provento } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Landmark, Calendar, TrendingUp, PiggyBank } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
-import AddAssetButton from './AddAssetButton';
 
 const KpiCard: React.FC<{ icon: React.ElementType; title: string; value: string; color: string }> = ({ icon: Icon, title, value, color }) => (
     <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
@@ -40,16 +39,15 @@ const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
 interface ProventosViewProps {
     portfolioData: Asset[];
     proventosData: Provento[];
-    onStartAddAssetFlow: () => void;
 }
 
-const ProventosView: React.FC<ProventosViewProps> = ({ portfolioData, proventosData, onStartAddAssetFlow }) => {
+const ProventosView: React.FC<ProventosViewProps> = ({ portfolioData, proventosData }) => {
     const [year, setYear] = useState(new Date().getFullYear());
     const { formatCurrency, convertValue } = useCurrency();
     const [selectedMonthIndex, setSelectedMonthIndex] = useState<number | null>(null);
 
     const yearsWithProventos = useMemo(() => {
-        const years = new Set(proventosData.map(p => new Date(p.date).getFullYear()));
+        const years = new Set(proventosData.map(p => new Date(p.date).getUTCFullYear()));
         if (!years.has(new Date().getFullYear())) {
              years.add(new Date().getFullYear());
         }
@@ -59,7 +57,7 @@ const ProventosView: React.FC<ProventosViewProps> = ({ portfolioData, proventosD
     const assetMap = useMemo(() => new Map(portfolioData.map(asset => [asset.id, asset])), [portfolioData]);
 
     const monthlyData = useMemo(() => {
-        const proventosInYear = proventosData.filter(p => new Date(p.date).getFullYear() === year);
+        const proventosInYear = proventosData.filter(p => new Date(p.date).getUTCFullYear() === year);
         const months = Array.from({ length: 12 }, (_, i) => {
             const monthName = new Date(year, i).toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
             return {
@@ -70,7 +68,7 @@ const ProventosView: React.FC<ProventosViewProps> = ({ portfolioData, proventosD
         });
 
         proventosInYear.forEach(provento => {
-            const monthIndex = new Date(provento.date).getMonth();
+            const monthIndex = new Date(provento.date).getUTCMonth();
             const asset = assetMap.get(provento.assetId);
             if (asset) {
                 const convertedValue = convertValue(provento.value);
@@ -99,7 +97,7 @@ const ProventosView: React.FC<ProventosViewProps> = ({ portfolioData, proventosD
     const kpiData = useMemo(() => {
         const totalRecebido = monthlyData.reduce((sum, m) => sum + m.total, 0);
         
-        const totalInvestidoDividendPayers = [...new Set(proventosData.filter(p => new Date(p.date).getFullYear() === year).map(p => p.assetId))]
+        const totalInvestidoDividendPayers = [...new Set(proventosData.filter(p => new Date(p.date).getUTCFullYear() === year).map(p => p.assetId))]
             .reduce((total, assetId) => {
                 const asset = assetMap.get(assetId);
                 return total + (asset ? asset.precoCompra * asset.quantidade : 0);
@@ -127,7 +125,6 @@ const ProventosView: React.FC<ProventosViewProps> = ({ portfolioData, proventosD
                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Resumo Anual</h2>
                 <div className="flex items-center gap-2">
                     <Calendar className="h-5 w-5 text-slate-500 dark:text-slate-400" />
-                    {/* FIX: The value from an HTML select element's onChange event is always a string. It must be parsed to a number before being used to update the 'year' state, which is of type number. */}
                     <select value={year} onChange={e => setYear(parseInt(e.target.value, 10))} className="bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-lg py-2 pl-3 pr-8 font-semibold focus:outline-none focus:ring-2 focus:ring-sky-500">
                         {yearsWithProventos.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
@@ -144,7 +141,15 @@ const ProventosView: React.FC<ProventosViewProps> = ({ portfolioData, proventosD
                 <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">Recebimentos Mensais</h3>
                 <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={monthlyData} onClick={(e) => e && setSelectedMonthIndex(e.activeTooltipIndex ?? null)} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                        <BarChart data={monthlyData} onClick={(e) => {
+                            const index = e?.activeTooltipIndex;
+                            if (index == null) {
+                                setSelectedMonthIndex(null);
+                            } else {
+                                const numIndex = Number(index);
+                                setSelectedMonthIndex(isNaN(numIndex) ? null : numIndex);
+                            }
+                        }} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.1)" />
                             <XAxis dataKey="name" tick={{ fill: '#94A3B8', fontSize: 12 }} />
                             <YAxis tickFormatter={(val) => formatCurrency(val)} tick={{ fill: '#94A3B8', fontSize: 12 }} />
@@ -190,7 +195,7 @@ const ProventosView: React.FC<ProventosViewProps> = ({ portfolioData, proventosD
             <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">Histórico de Pagamentos de {year}</h3>
                 <div className="max-h-96 overflow-y-auto">
-                    {proventosData.filter(p => new Date(p.date).getFullYear() === year).length > 0 ? (
+                    {proventosData.filter(p => new Date(p.date).getUTCFullYear() === year).length > 0 ? (
                         <table className="w-full text-left">
                             <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700/80 backdrop-blur-sm">
                                 <tr className="border-b border-slate-200 dark:border-slate-600">
@@ -201,7 +206,7 @@ const ProventosView: React.FC<ProventosViewProps> = ({ portfolioData, proventosD
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                {proventosData.filter(p => new Date(p.date).getFullYear() === year).map(provento => {
+                                {proventosData.filter(p => new Date(p.date).getUTCFullYear() === year).map(provento => {
                                     const asset = assetMap.get(provento.assetId);
                                     return (
                                         <tr key={provento.id}>
@@ -222,7 +227,6 @@ const ProventosView: React.FC<ProventosViewProps> = ({ portfolioData, proventosD
                     )}
                 </div>
             </div>
-            <AddAssetButton onClick={onStartAddAssetFlow} />
         </div>
     );
 };

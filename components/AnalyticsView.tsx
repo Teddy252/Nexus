@@ -3,11 +3,9 @@ import { Asset, KpiConfig } from '../types';
 import StatsBar from './StatsBar';
 import AllocationCharts from './AllocationCharts';
 import { Scale, BarChart3, TrendingUp, TrendingDown, Percent } from 'lucide-react';
-import AddAssetButton from './AddAssetButton';
 
 interface AnalyticsViewProps {
     portfolioData: Asset[];
-    onStartAddAssetFlow: () => void;
 }
 
 const ALL_KPIS: KpiConfig[] = [
@@ -20,7 +18,7 @@ const ALL_KPIS: KpiConfig[] = [
     { id: 'totalInvestido', title: 'Total Investido', icon: BarChart3, description: 'Soma de todo o capital investido.' }
 ];
 
-const AnalyticsView: React.FC<AnalyticsViewProps> = ({ portfolioData, onStartAddAssetFlow }) => {
+const AnalyticsView: React.FC<AnalyticsViewProps> = ({ portfolioData }) => {
     const [visibleKpis, setVisibleKpis] = useState<string[]>(['patrimonioTotal', 'totalGanhos', 'totalPerdas', 'lucroPrejuizoPercentual']);
 
     const derivedData = useMemo(() => {
@@ -82,7 +80,6 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ portfolioData, onStartAdd
             
             <AllocationCharts portfolioData={portfolioData} />
 
-            <AddAssetButton onClick={onStartAddAssetFlow} />
         </div>
     );
 };

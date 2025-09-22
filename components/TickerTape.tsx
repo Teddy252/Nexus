@@ -7,7 +7,7 @@ interface TickerTapeProps {
     assets: Asset[];
 }
 
-const TickerItem: React.FC<{ asset: Asset }> = ({ asset }) => {
+const TickerItem: React.FC<{ asset: Asset; index: number }> = ({ asset, index }) => {
     const dailyChange = asset.cotacaoBase > 0 ? ((asset.cotacaoAtual - asset.cotacaoBase) / asset.cotacaoBase) * 100 : 0;
     
     const isPositive = dailyChange >= 0;
@@ -34,7 +34,7 @@ const TickerItem: React.FC<{ asset: Asset }> = ({ asset }) => {
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                             <defs>
-                                <linearGradient id={`ticker-grad-${asset.id}`} x1="0" y1="0" x2="0" y2="1">
+                                <linearGradient id={`ticker-grad-${asset.id}-${index}`} x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor={trendColor} stopOpacity={0.1}/>
                                     <stop offset="95%" stopColor={trendColor} stopOpacity={0}/>
                                 </linearGradient>
@@ -44,7 +44,7 @@ const TickerItem: React.FC<{ asset: Asset }> = ({ asset }) => {
                                 dataKey="price" 
                                 stroke={trendColor} 
                                 strokeWidth={1.2} 
-                                fill={`url(#ticker-grad-${asset.id})`}
+                                fill={`url(#ticker-grad-${asset.id}-${index})`}
                                 isAnimationActive={false}
                             />
                         </AreaChart>
@@ -104,7 +104,7 @@ const TickerTape: React.FC<TickerTapeProps> = ({ assets }) => {
                 }}
             >
                 {duplicatedAssets.map((asset, index) => (
-                    <TickerItem key={`${asset.id}-${index}`} asset={asset} />
+                    <TickerItem key={`${asset.id}-${index}`} asset={asset} index={index} />
                 ))}
             </div>
             

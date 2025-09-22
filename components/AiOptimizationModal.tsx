@@ -71,19 +71,19 @@ const AiOptimizationModal: React.FC<AiOptimizationModalProps> = ({ isOpen, onClo
     );
 
     return (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 w-full max-w-2xl rounded-xl shadow-2xl flex flex-col">
-                <header className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-700">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-end sm:items-center z-50 p-0 sm:p-4">
+            <div className="bg-white dark:bg-slate-800 border-t border-slate-200 sm:border dark:border-slate-700 w-full max-w-2xl rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col h-full sm:h-auto sm:max-h-[90vh]">
+                <header className="flex-shrink-0 p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-700">
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Otimização de Portfólio com IA</h2>
                     <button onClick={onClose} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 rounded-full">
                         <X className="h-6 w-6" />
                     </button>
                 </header>
-                <main className="p-6 overflow-y-auto max-h-[70vh]">
+                <main className="flex-grow p-6 overflow-y-auto">
                    {isLoading ? renderLoading() : error ? renderError() : renderContent()}
                 </main>
                  {!isLoading && !error && analysis && (
-                    <footer className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end items-center gap-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-b-xl">
+                    <footer className="flex-shrink-0 p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end items-center gap-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-b-xl">
                         <button type="button" onClick={onClose} className="py-2 px-5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg font-semibold text-slate-700 dark:text-slate-300 transition-colors">
                             Cancelar
                         </button>

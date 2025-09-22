@@ -1,18 +1,18 @@
 import React from 'react';
-import { LayoutDashboard, Wallet, Newspaper, User, Landmark } from 'lucide-react';
+import { LayoutDashboard, Wallet, Rocket, PieChart, BrainCircuit } from 'lucide-react';
 
 interface BottomNavBarProps {
     activeView: string;
     onNavigate: (view: string) => void;
 }
 
-// A curated list for mobile navigation
+// A curated list for mobile navigation focused on core and onboarding tasks.
 const bottomNavItems = [
     { name: 'Dashboard', icon: LayoutDashboard, key: 'dashboard' },
     { name: 'Carteira', icon: Wallet, key: 'carteira' },
-    { name: 'Proventos', icon: Landmark, key: 'proventos' },
-    { name: 'Notícias', icon: Newspaper, key: 'noticias' },
-    { name: 'Conta', icon: User, key: 'conta' },
+    { name: 'Novatos', icon: Rocket, key: 'novatos' },
+    { name: 'Análise', icon: PieChart, key: 'analise' },
+    { name: 'IA', icon: BrainCircuit, key: 'ia' },
 ];
 
 const NavItem: React.FC<{
@@ -28,9 +28,9 @@ const NavItem: React.FC<{
         <button
             onClick={onClick}
             aria-label={label}
-            className={`flex flex-col items-center justify-center flex-1 py-2 transition-colors duration-200 ${isActive ? activeClasses : inactiveClasses}`}
+            className={`flex flex-col items-center justify-center flex-1 py-2 transition-all duration-200 ${isActive ? activeClasses : inactiveClasses}`}
         >
-            <Icon className="h-6 w-6 mb-1" />
+            <Icon className={`h-6 w-6 mb-1 transition-transform ${isActive ? 'scale-110' : 'scale-100'}`} />
             <span className="text-xs font-medium">{label}</span>
         </button>
     );

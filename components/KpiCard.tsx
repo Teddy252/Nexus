@@ -1,7 +1,7 @@
 import React from 'react';
 import type { LucideProps } from 'lucide-react';
 import { GripVertical, XCircle } from 'lucide-react';
-import { useCurrency } from '../context/CurrencyContext';
+import { useCurrency } from '../context/CurrencyContext.tsx';
 
 interface KpiCardProps {
     title: string;

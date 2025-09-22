@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Asset } from '../types';
+import { Asset } from '../types.ts';
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from 'recharts';
 
 interface AllocationChartsProps {

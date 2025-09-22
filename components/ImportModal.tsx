@@ -54,6 +54,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
             }
 
             const categoria = asset.categoria || 'Ações';
+            const pais = asset.pais || (categoria === 'Cripto' ? 'Global' : 'Brasil');
             const newAsset: Asset = {
                 id: Date.now() + index,
                 ticker: String(ticker).toUpperCase(),
@@ -64,7 +65,8 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
                 cotacaoBase: preco,
                 cotacaoAtual: preco,
                 corretora: asset.corretora || 'N/A',
-                pais: asset.pais || (categoria === 'Cripto' ? 'Global' : 'Brasil'),
+                pais: pais,
+                moedaCompra: (pais === 'EUA' || categoria === 'Cripto') ? 'USD' : 'BRL',
                 riskProfile: categoria === 'Cripto' ? 'Arriscado' : (['FIIs', 'Tesouro Direto'].includes(categoria) ? 'Seguro' : 'Moderado'),
                 historicoPreco: Array(7).fill(preco),
                 dividendYield: 0,
@@ -206,7 +208,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
                             <tr key={asset.id} className="dark:text-slate-300">
                                 <td className="p-2 font-semibold text-slate-800 dark:text-slate-200">{asset.ticker}</td>
                                 <td className="p-2">{asset.quantidade.toLocaleString('pt-BR')}</td>
-                                <td className="p-2">{`R$ ${asset.precoCompra.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`}</td>
+                                <td className="p-2">{`${asset.moedaCompra === 'USD' ? '$' : 'R$'} ${asset.precoCompra.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`}</td>
                                 <td className="p-2">{asset.categoria}</td>
                             </tr>
                         ))}

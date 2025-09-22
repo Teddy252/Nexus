@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { Asset, AiAnalysis, NewsItem, AiOptimizationAnalysis, SimulatedSale, TaxSummary, OptimizationStrategy } from '../types';
+import { Asset, AiAnalysis, NewsItem, AiOptimizationAnalysis, SimulatedSale, TaxSummary, OptimizationStrategy, Message, InvestorProfile } from '../types.ts';
 
 // Robust check for API_KEY to prevent crashing the app.
 const API_KEY = process.env.API_KEY;
@@ -253,21 +253,34 @@ export const getPortfolioOptimization = async (portfolio: Asset[], strategy: Opt
     return JSON.parse(jsonText) as AiOptimizationAnalysis;
 };
 
+const dividendYieldSchema = {
+    type: Type.OBJECT,
+    properties: {
+        dividendYield: { 
+            type: Type.NUMBER, 
+            description: "O dividend yield anual do ativo em formato percentual (ex: 5.42 para 5.42%). Se não for aplicável ou não for encontrado, o valor deve ser 0." 
+        },
+    },
+    required: ["dividendYield"],
+};
 
 export const getDividendYield = async (ticker: string, country: string): Promise<number> => {
     throwErrorIfAiDisabled();
-    const prompt = `Qual é o dividend yield anual para o ativo '${ticker}' do país '${country}'? Responda APENAS com o número percentual (ex: 5.42). Se não for aplicável ou não encontrar, responda '0'.`;
+    const prompt = `Qual é o dividend yield anual para o ativo '${ticker}' do país '${country}'?`;
 
     try {
         const response = await ai!.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: dividendYieldSchema,
+            },
         });
 
-        const textResponse = response.text.trim().replace(',', '.');
-        const yieldValue = parseFloat(textResponse);
-        
-        return isNaN(yieldValue) ? 0 : yieldValue;
+        const jsonText = response.text.trim();
+        const parsed = JSON.parse(jsonText) as { dividendYield: number };
+        return parsed.dividendYield || 0;
     } catch (error) {
         console.error("Error fetching dividend yield:", error);
         return 0;
@@ -478,5 +491,209 @@ export const extractAssetsFromFileContent = async (fileContent: string): Promise
     } catch (error) {
         console.error("Error extracting assets with AI:", error);
         throw new Error("A IA não conseguiu analisar o arquivo. Verifique se o formato é simples e contém colunas claras como 'ticker', 'quantidade' e 'precoCompra'.");
+    }
+};
+
+export interface ProfileAnalysisResult {
+    profile: InvestorProfile;
+    summary: string;
+}
+
+const profileAnalysisSchema = {
+    type: Type.OBJECT,
+    properties: {
+        profile: { 
+            type: Type.STRING, 
+            description: "O perfil de investidor do usuário. Deve ser 'Conservador', 'Moderado' ou 'Agressivo'."
+        },
+        summary: { 
+            type: Type.STRING, 
+            description: "Um resumo amigável e conciso explicando por que o perfil foi determinado, para ser exibido ao usuário."
+        },
+    },
+    required: ["profile", "summary"],
+};
+
+export const getInvestorProfileAnalysis = async (chatHistory: Message[]): Promise<ProfileAnalysisResult> => {
+    throwErrorIfAiDisabled();
+    const userMessageCount = chatHistory.filter(m => m.sender === 'user').length;
+    const shouldDetermineProfile = userMessageCount >= 3;
+
+    const formattedHistory = chatHistory.map(m => `${m.sender === 'user' ? 'Usuário' : 'Assistente'}: ${m.text}`).join('\n');
+
+    const prompt = `
+        Aja como um Planejador Financeiro Pessoal (CFP®) extremamente didático e amigável. Seu objetivo é guiar um investidor iniciante a descobrir seu perfil de investidor (Conservador, Moderado, Agressivo) através de uma conversa curta e acolhedora.
+
+        **Sua Personalidade:**
+        - **Educador:** Sempre explique o "porquê" de suas perguntas de forma simples. Ex: "Vou te perguntar sobre o tempo, porque investimentos de longo prazo se comportam de maneira diferente dos de curto prazo."
+        - **Empático:** Reconheça que começar a investir pode ser intimidador. Use frases como "Ótima pergunta!", "Entendo perfeitamente", "Não se preocupe, vamos descobrir juntos".
+        - **Focado:** Faça uma pergunta clara e objetiva por vez.
+
+        **Instruções do Processo:**
+        1.  Comece a conversa de forma calorosa. O histórico já terá sua primeira mensagem.
+        2.  Analise a resposta do usuário e faça a próxima pergunta relevante para entender um dos 4 pilares: **Objetivos, Tolerância a Risco, Horizonte de Tempo, e Conhecimento**.
+        3.  Após o usuário responder a 3 ou 4 perguntas (quando você tiver informações suficientes para cobrir os pilares), sua **PRÓXIMA** resposta deve ser **APENAS** o objeto JSON final com o perfil e um resumo claro e encorajador.
+        4.  Se ainda não tiver informações suficientes, continue a conversa fazendo a próxima pergunta relevante. **NÃO** retorne o JSON ainda. Use o histórico para não repetir temas.
+
+        **Pilares a serem investigados:**
+        - **Objetivos:** O que o usuário quer fazer com o dinheiro? (Comprar uma casa, aposentadoria, uma viagem?)
+        - **Horizonte de Tempo:** Para quando ele precisa do dinheiro? (1 ano, 5 anos, mais de 10 anos?)
+        - **Tolerância a Risco:** Como ele se sentiria se o valor investido caísse 20% em um mês? (Ficaria ansioso e venderia tudo, ou veria como uma oportunidade para comprar mais?)
+        - **Conhecimento:** Ele já investiu antes? Conhece termos como ações, renda fixa?
+
+        Histórico da Conversa até agora:
+        ${formattedHistory}
+
+        ${shouldDetermineProfile ? 
+            `Baseado no histórico, você já tem informações suficientes. Responda APENAS com o objeto JSON contendo o perfil e o resumo, como no schema. O resumo deve explicar de forma simples POR QUE você chegou a essa conclusão, citando as respostas do usuário, e parabenizá-lo por dar o primeiro passo.` 
+            : `Continue a conversa fazendo a próxima pergunta. Lembre-se, uma pergunta por vez, com uma breve explicação do motivo.`
+        }
+    `;
+
+    try {
+        const response = await ai!.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: shouldDetermineProfile ? {
+                responseMimeType: "application/json",
+                responseSchema: profileAnalysisSchema,
+            } : {},
+        });
+
+        const textResponse = response.text.trim();
+
+        if (shouldDetermineProfile) {
+            const parsed = JSON.parse(textResponse);
+            return { profile: parsed.profile as InvestorProfile, summary: parsed.summary };
+        } else {
+             return { profile: null, summary: textResponse };
+        }
+    } catch (e) {
+        console.error("Error in AI profile analysis:", e);
+        // Fallback for unexpected errors
+        return { profile: null, summary: "Desculpe, tive um problema. Poderia me contar um pouco mais sobre sua experiência com investimentos?" };
+    }
+};
+
+const intentSchema = {
+  type: Type.OBJECT,
+  properties: {
+    intent: {
+      type: Type.STRING,
+      description: "Classifique a intenção do usuário. Valores possíveis: 'ANALISE_CARTEIRA', 'OTIMIZACAO_CARTEIRA', 'NOTICIAS_ATIVO', 'DUVIDA_GERAL'."
+    },
+    ticker: {
+      type: Type.STRING,
+      description: "Se a intenção for 'NOTICIAS_ATIVO', extraia o ticker do ativo. Caso contrário, deixe em branco."
+    },
+    strategy: {
+        type: Type.STRING,
+        description: "Se a intenção for 'OTIMIZACAO_CARTEIRA', extraia a estratégia. Valores possíveis: 'Conservador', 'Balanceado', 'Agressivo'. Se não especificado, use 'Balanceado'."
+    }
+  },
+  required: ["intent"],
+};
+
+export const getAiChatResponse = async (
+    chatHistory: Message[],
+    portfolioData: Asset[]
+): Promise<Message> => {
+    throwErrorIfAiDisabled();
+    
+    const userPrompt = chatHistory[chatHistory.length - 1].text;
+
+    const classificationPrompt = `
+        Analise a seguinte pergunta de um usuário de um app de investimentos e classifique sua intenção principal.
+        
+        - Se o usuário pedir uma análise, visão geral, resumo, pontos fortes/fracos ou algo similar sobre a carteira, a intenção é 'ANALISE_CARTEIRA'.
+        - Se o usuário pedir para otimizar, rebalancear, melhorar ou sugerir compras/vendas na carteira, a intenção é 'OTIMIZACAO_CARTEIRA'. Extraia a estratégia (Conservador, Balanceado, Agressivo). Se nenhuma for mencionada, use 'Balanceado'.
+        - Se o usuário pedir notícias sobre um ativo específico (ex: "notícias da PETR4"), a intenção é 'NOTICIAS_ATIVO'. Extraia o ticker do ativo.
+        - Para todas as outras perguntas sobre finanças, investimentos, ou qualquer outro tópico, a intenção é 'DUVIDA_GERAL'.
+        
+        Pergunta do usuário: "${userPrompt}"
+    `;
+
+    let intentData: { intent: string; ticker?: string; strategy?: OptimizationStrategy };
+
+    try {
+        const intentResponse = await ai!.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: classificationPrompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: intentSchema,
+            },
+        });
+        const jsonText = intentResponse.text.trim();
+        intentData = JSON.parse(jsonText);
+    } catch (error) {
+        console.error("AI Intent Classification failed, defaulting to general question.", error);
+        intentData = { intent: 'DUVIDA_GERAL' };
+    }
+
+    switch (intentData.intent) {
+        case 'ANALISE_CARTEIRA':
+            try {
+                const analysis = await getPortfolioAnalysis(portfolioData);
+                return {
+                    sender: 'ai',
+                    text: `Aqui está uma análise da sua carteira feita pela IA. ${analysis.summary}`,
+                    type: 'analysis',
+                    data: analysis,
+                };
+            } catch (e) {
+                return { sender: 'ai', text: 'Desculpe, não consegui analisar sua carteira agora. Tente novamente mais tarde.' };
+            }
+
+        case 'OTIMIZACAO_CARTEIRA':
+            try {
+                const strategy = intentData.strategy || 'Balanceado';
+                const optimization = await getPortfolioOptimization(portfolioData, strategy);
+                return {
+                    sender: 'ai',
+                    text: `Preparei um plano de otimização com um perfil **${strategy}**. ${optimization.strategySummary}`,
+                    type: 'optimization',
+                    data: optimization,
+                };
+            } catch (e) {
+                 return { sender: 'ai', text: 'Desculpe, não consegui gerar a otimização. Tente novamente mais tarde.' };
+            }
+        
+        case 'NOTICIAS_ATIVO':
+            if (!intentData.ticker) {
+                 return { sender: 'ai', text: 'Não consegui identificar sobre qual ativo você quer notícias. Poderia especificar o ticker? Ex: "notícias da PETR4".' };
+            }
+            try {
+                const news = await getRelevantNews(intentData.ticker);
+                if (news.length === 0) {
+                     return { sender: 'ai', text: `Não encontrei notícias recentes para ${intentData.ticker}.` };
+                }
+                const newsText = `Aqui estão as últimas notícias sobre ${intentData.ticker}:\n` + news.map(n => `- **${n.title}** (${n.source}): *${n.summary}*`).join('\n');
+                return {
+                    sender: 'ai',
+                    text: newsText,
+                    type: 'news',
+                    data: news,
+                };
+            } catch (e) {
+                 return { sender: 'ai', text: `Desculpe, tive um problema ao buscar notícias para ${intentData.ticker}.` };
+            }
+            
+        case 'DUVIDA_GERAL':
+        default:
+            const generalPrompt = `
+                Você é um assistente financeiro amigável e didático chamado Nexus AI.
+                Responda a pergunta do usuário de forma clara e concisa, em português do Brasil.
+                
+                Histórico da conversa (para contexto):
+                ${chatHistory.slice(0, -1).map(m => `${m.sender}: ${m.text}`).join('\n')}
+                
+                Pergunta do usuário: "${userPrompt}"
+            `;
+            const response = await ai!.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: generalPrompt,
+            });
+            return { sender: 'ai', text: response.text.trim() };
     }
 };

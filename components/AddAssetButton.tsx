@@ -7,14 +7,16 @@ interface AddAssetButtonProps {
 
 const AddAssetButton: React.FC<AddAssetButtonProps> = ({ onClick }) => {
     return (
-        <button
-            onClick={onClick}
-            title="Adicionar Novo Ativo"
-            aria-label="Adicionar Novo Ativo"
-            className="fixed bottom-20 right-6 lg:bottom-8 lg:right-8 z-30 flex h-16 w-16 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg shadow-sky-500/40 transition-all duration-300 ease-in-out hover:bg-sky-500 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-sky-500/50 animate-fade-in-scale-up"
-        >
-            <Plus className="h-8 w-8" />
-        </button>
+        <div className="fixed bottom-20 right-6 lg:bottom-8 lg:right-8 z-30">
+            <button
+                onClick={onClick}
+                title="Adicionar Novo Ativo"
+                aria-label="Adicionar Novo Ativo"
+                className="w-14 h-14 flex items-center justify-center bg-sky-600 text-white rounded-full shadow-xl shadow-sky-500/40 transition-all transform hover:scale-110 hover:bg-sky-500 focus:outline-none focus:ring-4 focus:ring-sky-500/50"
+            >
+                <Plus className="h-7 w-7" />
+            </button>
+        </div>
     );
 };
 

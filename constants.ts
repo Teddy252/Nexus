@@ -1,14 +1,8 @@
-import { Asset } from './types';
+import { Asset, IrInfo } from './types';
 
 // A constante INITIAL_PORTFOLIO_DATA foi removida, pois a carteira de um novo usuário
 // agora é gerenciada pela tabela 'ativos' e começa vazia.
 // O código legado que a utilizava foi atualizado.
-
-interface IrInfo {
-    group: string;
-    code: string;
-    description: string;
-}
 
 export const IR_INFO_DATA: Record<string, IrInfo> = {
     'Ações': {

@@ -8,6 +8,7 @@ interface SideNavBarProps {
     isCollapsed: boolean;
     onToggleCollapse: () => void;
     onLogout: () => void;
+    unreadNotificationsCount: number;
 }
 
 const NavItem: React.FC<{
@@ -16,25 +17,31 @@ const NavItem: React.FC<{
     isActive: boolean;
     onClick: () => void;
     isCollapsed: boolean;
-}> = ({ icon: Icon, label, isActive, onClick, isCollapsed }) => {
+    badgeCount?: number;
+}> = ({ icon: Icon, label, isActive, onClick, isCollapsed, badgeCount = 0 }) => {
     const activeClasses = 'bg-sky-600 text-white shadow-md shadow-sky-500/20';
     const inactiveClasses = 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50';
     return (
         <button
             onClick={onClick}
             title={isCollapsed ? label : undefined}
-            className={`flex items-center w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-200 ${
+            className={`relative flex items-center w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-200 ${
                 isActive ? activeClasses : inactiveClasses
             } ${isCollapsed ? 'justify-center' : ''}`}
         >
             <Icon className={`h-5 w-5 ${!isCollapsed ? 'mr-3' : ''}`} />
             {!isCollapsed && <span>{label}</span>}
+            {badgeCount > 0 && (
+                <span className={`absolute top-1.5 flex items-center justify-center text-xs font-bold text-white bg-red-500 rounded-full ${isCollapsed ? 'right-2 h-5 w-5' : 'right-3 h-6 w-6'}`}>
+                    {badgeCount}
+                </span>
+            )}
         </button>
     );
 };
 
 
-const SideNavBar: React.FC<SideNavBarProps> = ({ activeView, onNavigate, isCollapsed, onToggleCollapse, onLogout }) => {
+const SideNavBar: React.FC<SideNavBarProps> = ({ activeView, onNavigate, isCollapsed, onToggleCollapse, onLogout, unreadNotificationsCount }) => {
     
     return (
         <aside className={`hidden lg:flex flex-col bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 fixed top-4 left-4 h-[calc(100vh-2rem)] rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 p-3 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
@@ -54,6 +61,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeView, onNavigate, isColla
                         isActive={activeView === item.key}
                         onClick={() => onNavigate(item.key)}
                         isCollapsed={isCollapsed}
+                        badgeCount={item.key === 'notificacoes' ? unreadNotificationsCount : 0}
                     />
                 ))}
             </nav>

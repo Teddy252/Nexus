@@ -1,6 +1,6 @@
-import React, { useState, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import { Loader2 } from 'lucide-react';
+import React, { useState, useContext, useEffect } from 'react';
+import { AuthContext } from '../context/AuthContext.tsx';
+import { Loader2, User, Eye, EyeOff } from 'lucide-react';
 
 const GoogleIcon = () => (
     <svg className="w-5 h-5" viewBox="0 0 48 48">
@@ -15,6 +15,7 @@ const AuthPage: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [error, setError] = useState('');
@@ -22,6 +23,14 @@ const AuthPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     
     const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useContext(AuthContext);
+
+    useEffect(() => {
+        // Clear fields when switching to sign-up to avoid confusion
+        if (!isLogin) {
+            setEmail('');
+            setPassword('');
+        }
+    }, [isLogin]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -117,16 +126,26 @@ const AuthPage: React.FC = () => {
                         </div>
                         <div>
                             <label htmlFor="password"className="block text-sm font-medium text-slate-400 mb-1">Senha</label>
-                            <input
-                                type="password"
-                                id="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                minLength={6}
-                                className="w-full bg-slate-800 border border-slate-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
-                                placeholder="••••••••"
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    id="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    minLength={6}
+                                    className="w-full bg-slate-800 border border-slate-600 rounded-md py-2 px-3 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-200"
+                                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                                >
+                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                </button>
+                            </div>
                         </div>
                         <button
                             type="submit"
@@ -146,19 +165,20 @@ const AuthPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={handleGoogleSignIn}
-                        className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg font-semibold text-white transition-colors"
-                    >
-                        <GoogleIcon />
-                        Google
-                    </button>
+                    <div className="space-y-3">
+                        <button
+                            type="button"
+                            onClick={handleGoogleSignIn}
+                            className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg font-semibold text-white transition-colors"
+                        >
+                            <GoogleIcon />
+                            Google
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     );
 };
 
-// FIX: Add default export to make the component available for import.
 export default AuthPage;

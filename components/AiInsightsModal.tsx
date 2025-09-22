@@ -1,5 +1,5 @@
 import React from 'react';
-import { AiAnalysis } from '../types';
+import { AiAnalysis } from '../types.ts';
 import { X, TrendingUp, TrendingDown, Package, Globe, AlertTriangle, Lightbulb, Bot, Sparkles, Activity, MinusCircle } from 'lucide-react';
 
 interface AiInsightsModalProps {
@@ -165,15 +165,15 @@ const AiInsightsModal: React.FC<AiInsightsModalProps> = ({ isOpen, onClose, anal
     }
 
     return (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col">
-                <header className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-700">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-end sm:items-center z-50 p-0 sm:p-4">
+            <div className="bg-white dark:bg-slate-800 border-t border-slate-200 sm:border dark:border-slate-700 w-full max-w-3xl rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-full sm:h-auto sm:max-h-[90vh]">
+                <header className="flex-shrink-0 p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-700">
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Análise de Portfólio com IA</h2>
                     <button onClick={onClose} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 rounded-full">
                         <X className="h-6 w-6" />
                     </button>
                 </header>
-                <main className="p-6 overflow-y-auto max-h-[80vh]">
+                <main className="flex-grow p-6 overflow-y-auto">
                    {isLoading ? renderLoading() : error ? renderError() : renderContent()}
                 </main>
             </div>

@@ -1,9 +1,11 @@
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import { Search, User as UserIcon, ChevronDown, LogOut } from 'lucide-react';
-import { AuthContext } from '../context/AuthContext';
-import QuickActions from './QuickActions';
-import SearchModal from './SearchModal';
-import { Asset } from '../types';
+import { AuthContext } from '../context/AuthContext.tsx';
+import QuickActions from './QuickActions.tsx';
+import SearchModal from './SearchModal.tsx';
+import { Asset, Notification } from '../types.ts';
+import NotificationBell from './NotificationBell.tsx';
+import NotificationsPanel from './NotificationsPanel.tsx';
 
 interface HeaderProps {
     portfolioData: Asset[];
@@ -15,20 +17,45 @@ interface HeaderProps {
     onLogout: () => void;
     onNavigate: (view: string) => void;
     onSelectAsset: (ticker: string) => void;
+    notifications: Notification[];
+    unreadCount: number;
+    onMarkAsRead: (id: string) => void;
+    onMarkAllAsRead: () => void;
+    onNotificationClick: (notification: Notification) => void;
 }
 
 
-const Header: React.FC<HeaderProps> = ({ portfolioData, onLogout, onNavigate, onSelectAsset, onStartAddAssetFlow, onAiAnalysis, onExportPdf, isExportingPdf, onOptimizePortfolio }) => {
+const Header: React.FC<HeaderProps> = ({ 
+    portfolioData, onLogout, onNavigate, onSelectAsset, onStartAddAssetFlow, 
+    onAiAnalysis, onExportPdf, isExportingPdf, onOptimizePortfolio,
+    notifications, unreadCount, onMarkAsRead, onMarkAllAsRead, onNotificationClick
+}) => {
     const { userProfile } = useContext(AuthContext);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+    const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const notificationsRef = useRef<HTMLDivElement>(null);
 
     const getInitials = () => {
         const first = userProfile?.first_name?.[0] || '';
         const last = userProfile?.last_name?.[0] || '';
         return `${first}${last}`.toUpperCase() || 'U';
     }
+
+    // Combined hook for outside clicks
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+            if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+                setIsNotificationsPanelOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     // Focus first item on open
     useEffect(() => {
@@ -40,14 +67,8 @@ const Header: React.FC<HeaderProps> = ({ portfolioData, onLogout, onNavigate, on
         }
     }, [isDropdownOpen]);
 
-    // Handle outside clicks and keyboard navigation
+    // Handle keyboard navigation for user menu
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsDropdownOpen(false);
-            }
-        };
-
         const handleKeyDown = (event: KeyboardEvent) => {
             if (!isDropdownOpen) return;
 
@@ -79,12 +100,8 @@ const Header: React.FC<HeaderProps> = ({ portfolioData, onLogout, onNavigate, on
             }
         };
 
-        document.addEventListener("mousedown", handleClickOutside);
         document.addEventListener("keydown", handleKeyDown);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-            document.removeEventListener("keydown", handleKeyDown);
-        };
+        return () => document.removeEventListener("keydown", handleKeyDown);
     }, [isDropdownOpen]);
 
     const displayName = [userProfile?.first_name, userProfile?.last_name]
@@ -113,6 +130,24 @@ const Header: React.FC<HeaderProps> = ({ portfolioData, onLogout, onNavigate, on
                             onExportPdf={onExportPdf}
                             isExportingPdf={isExportingPdf}
                             onOptimizePortfolio={onOptimizePortfolio}
+                        />
+                    </div>
+                    <div className="relative" ref={notificationsRef}>
+                        <NotificationBell
+                            unreadCount={unreadCount}
+                            onClick={() => setIsNotificationsPanelOpen(prev => !prev)}
+                        />
+                        <NotificationsPanel
+                            isOpen={isNotificationsPanelOpen}
+                            onClose={() => setIsNotificationsPanelOpen(false)}
+                            notifications={notifications}
+                            onMarkAsRead={onMarkAsRead}
+                            onMarkAllAsRead={onMarkAllAsRead}
+                            onNavigateToNotifications={() => {
+                                onNavigate('notificacoes');
+                                setIsNotificationsPanelOpen(false);
+                            }}
+                            onNotificationClick={onNotificationClick}
                         />
                     </div>
                     <div className="relative" ref={dropdownRef}>

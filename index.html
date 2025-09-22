@@ -91,6 +91,18 @@
           z-index: 10;
           box-shadow: 0 0 8px #0ea5e9;
       }
+      .drag-over-column-indicator::after {
+          content: '';
+          position: absolute;
+          top: 25%;
+          right: -1px;
+          width: 2px;
+          height: 50%;
+          background-color: #0ea5e9; /* sky-500 */
+          z-index: 10;
+          box-shadow: 0 0 8px #0ea5e9;
+          border-radius: 2px;
+      }
       @keyframes highlight-fade {
         from { background-color: rgba(254, 249, 195, 1); } /* yellow-100 */
         to { background-color: rgba(254, 249, 195, 0); }
@@ -161,6 +173,73 @@
       }
       .animate-fade-in-item {
         animation: fade-in-item 0.2s ease-out forwards;
+      }
+      @keyframes slideInRight {
+        from {
+          opacity: 0;
+          transform: translateX(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      .animate-slide-in-right {
+        animation: slideInRight 0.3s ease-out forwards;
+      }
+      @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.5s ease-out forwards;
+      }
+
+      @keyframes typing-bubble {
+        0%, 100% {
+          transform: translateY(0px);
+        }
+        33% {
+          transform: translateY(-3px);
+        }
+        66% {
+          transform: translateY(0px);
+        }
+      }
+      .typing-dot {
+        animation: typing-bubble 1.2s infinite ease-in-out;
+      }
+      
+      @keyframes slideInDownAndFade {
+        from {
+          opacity: 0;
+          transform: translateY(-100%);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-slide-in-down-fade {
+        animation: slideInDownAndFade 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      }
+
+      @keyframes slideOutUpAndFade {
+        from {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateY(-100%);
+        }
+      }
+      .animate-slide-out-up-fade {
+        animation: slideOutUpAndFade 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
       }
     </style>
   <script type="importmap">

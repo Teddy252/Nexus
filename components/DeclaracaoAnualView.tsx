@@ -1,13 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Asset } from '../types';
-import { FileText, Loader2, Clipboard, Check, AlertTriangle } from 'lucide-react';
+import { Asset, IrInfo } from '../types';
+import { FileText, Loader2, Clipboard, Check, AlertTriangle, Download } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
-
-interface IrInfo {
-    group: string;
-    code: string;
-    description: string;
-}
+import { generateAnnualTaxReportPdf } from '../services/pdfService';
+import { generateAnnualTaxReportXlsx, generateAnnualTaxReportCsv } from '../services/exportService';
 
 interface DeclaracaoAnualViewProps {
     portfolioData: Asset[];
@@ -42,6 +38,20 @@ const DeclaracaoAnualView: React.FC<DeclaracaoAnualViewProps> = ({ portfolioData
     const totalAcquisitionCost = useMemo(() => {
         return portfolioData.reduce((sum, asset) => sum + (asset.precoCompra * asset.quantidade), 0);
     }, [portfolioData]);
+
+    const handleDownload = (format: 'pdf' | 'xlsx' | 'csv') => {
+        switch (format) {
+            case 'pdf':
+                generateAnnualTaxReportPdf(portfolioData, irInfo, year);
+                break;
+            case 'xlsx':
+                generateAnnualTaxReportXlsx(portfolioData, irInfo, year);
+                break;
+            case 'csv':
+                generateAnnualTaxReportCsv(portfolioData, irInfo, year);
+                break;
+        }
+    };
     
     return (
         <div className="max-w-6xl mx-auto">
@@ -50,17 +60,27 @@ const DeclaracaoAnualView: React.FC<DeclaracaoAnualViewProps> = ({ portfolioData
                 <p className="text-base md:text-lg text-slate-500 dark:text-slate-400">Consolide as informações da sua carteira para a declaração de "Bens e Direitos".</p>
             </header>
             
-            <div className="flex flex-col md:flex-row gap-6 mb-8 p-6 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg items-center">
-                <div>
-                    <label htmlFor="year" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Ano-Calendário</label>
-                    <select id="year" value={year} onChange={(e) => setYear(parseInt(e.target.value))} className="bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-lg py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-sky-500">
-                        <option>{new Date().getFullYear() - 1}</option>
-                        <option>{new Date().getFullYear() - 2}</option>
-                        <option>{new Date().getFullYear() - 3}</option>
-                    </select>
+            <div className="flex flex-col md:flex-row gap-6 mb-8 p-6 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div>
+                        <label htmlFor="year" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Ano-Calendário</label>
+                        <select id="year" value={year} onChange={(e) => setYear(parseInt(e.target.value))} className="bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-lg py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            <option>{new Date().getFullYear() - 1}</option>
+                            <option>{new Date().getFullYear() - 2}</option>
+                            <option>{new Date().getFullYear() - 3}</option>
+                        </select>
+                    </div>
+                    <div className="sm:border-l sm:pl-4 sm:ml-4 border-slate-200 dark:border-slate-700">
+                        <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Exportar Relatório</label>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => handleDownload('pdf')} title="Baixar PDF" className="p-2.5 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors"><Download className="h-5 w-5" /></button>
+                            <button onClick={() => handleDownload('xlsx')} title="Baixar XLSX" className="p-2.5 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-lg transition-colors"><Download className="h-5 w-5" /></button>
+                            <button onClick={() => handleDownload('csv')} title="Baixar CSV" className="p-2.5 bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg transition-colors"><Download className="h-5 w-5" /></button>
+                        </div>
+                    </div>
                 </div>
-                 <div className="flex-grow text-center md:text-right">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Valor Total em Bens e Direitos (Custo de Aquisição)</p>
+                <div className="text-center md:text-right">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Custo Total de Aquisição</p>
                     <p className="text-3xl font-bold text-sky-600 dark:text-sky-400">{formatCurrency(convertValue(totalAcquisitionCost))}</p>
                 </div>
             </div>

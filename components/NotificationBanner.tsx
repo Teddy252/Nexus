@@ -1,43 +1,67 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Notification } from '../types';
-import { X, Bell } from 'lucide-react';
+import { X, AlertTriangle, Landmark, MessageSquare, PieChart, Bell } from 'lucide-react';
 
 interface NotificationBannerProps {
-    notifications: Notification[];
-    onDismiss: (id: number) => void;
+    notification: Notification;
+    onClose: () => void;
+    onClick: () => void;
 }
 
-const NotificationBanner: React.FC<NotificationBannerProps> = ({ notifications, onDismiss }) => {
-    if (notifications.length === 0) {
-        return null;
+const getNotificationIcon = (notification: Notification) => {
+    if (notification.title === 'Resumo da Carteira') {
+        return <PieChart className="h-6 w-6 text-purple-500" />;
     }
+    switch (notification.type) {
+        case 'price_alert': return <AlertTriangle className="h-6 w-6 text-amber-500" />;
+        case 'dividend_payment': return <Landmark className="h-6 w-6 text-emerald-500" />;
+        case 'system_message': return <MessageSquare className="h-6 w-6 text-sky-500" />;
+        default: return <Bell className="h-6 w-6 text-slate-500" />;
+    }
+};
+
+const NotificationBanner: React.FC<NotificationBannerProps> = ({ notification, onClose, onClick }) => {
+    const [isExiting, setIsExiting] = useState(false);
+
+    const handleClose = () => {
+        setIsExiting(true);
+        setTimeout(onClose, 500); // Wait for animation to finish
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            handleClose();
+        }, 5000); // Auto-dismiss after 5 seconds
+
+        return () => clearTimeout(timer);
+    }, [notification]);
+
+    const animationClass = isExiting ? 'animate-slide-out-up-fade' : 'animate-slide-in-down-fade';
 
     return (
-        <div className="fixed top-6 right-6 z-50 w-full max-w-sm space-y-3">
-            {notifications.map(notification => (
-                <div
-                    key={notification.id}
-                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl p-4 flex items-start gap-4 animate-fade-in-down"
-                    role="alert"
-                    aria-live="assertive"
+        <div className={`fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-[100] ${animationClass}`}>
+            <div className="w-full max-w-sm sm:max-w-md mx-auto">
+                 <div
+                    onClick={onClick}
+                    className="flex items-start gap-4 p-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl cursor-pointer"
                 >
-                    <div className="flex-shrink-0 pt-1">
-                        <Bell className="h-6 w-6 text-yellow-500" />
-                    </div>
+                    <div className="flex-shrink-0 pt-1">{getNotificationIcon(notification)}</div>
                     <div className="flex-grow">
-                        <p className="font-bold text-slate-800 dark:text-slate-100">Alerta de Preço Atingido</p>
+                        <p className="font-bold text-slate-800 dark:text-slate-100">{notification.title}</p>
                         <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{notification.message}</p>
                     </div>
                     <button
-                        onClick={() => onDismiss(notification.id)}
-                        className="p-1.5 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleClose();
+                        }}
+                        className="p-1.5 -mr-2 -mt-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700"
                         aria-label="Dispensar notificação"
-                        title="Dispensar notificação"
                     >
-                        <X className="h-5 w-5"/>
+                        <X className="h-4 w-4"/>
                     </button>
                 </div>
-            ))}
+            </div>
         </div>
     );
 };

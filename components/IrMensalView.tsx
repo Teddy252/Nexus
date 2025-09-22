@@ -6,6 +6,7 @@ import { getTaxExplanation } from '../services/geminiService';
 import { useDebounce } from '../hooks/useDebounce';
 import { Plus, Trash2, Calculator, BarChart, TrendingUp, FileText, AlertTriangle, BrainCircuit, Loader2 } from 'lucide-react';
 import { useCurrency } from '../context/CurrencyContext';
+import { formatAndSanitizeAiText } from '../utils/sanitizer.ts';
 
 const StatCard: React.FC<{ title: string; value: string; icon: React.ElementType, color: string }> = ({ title, value, icon: Icon, color }) => (
     <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4">
@@ -119,10 +120,7 @@ const IrMensalView: React.FC<{ portfolioData: Asset[] }> = ({ portfolioData }) =
                 <div
                     className="text-sm text-slate-600 dark:text-slate-300 space-y-2 prose dark:prose-invert"
                     dangerouslySetInnerHTML={{
-                        __html: aiExplanation
-                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                             .replace(/^- (.*$)/gim, '<ul class="list-disc list-inside ml-4"><li>$1</li></ul>')
-                            .replace(/<\/ul>\n<ul/g, '')
+                        __html: formatAndSanitizeAiText(aiExplanation)
                     }}
                 />
             )}
