@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Asset, KpiConfig } from '../types';
 import StatsBar from './StatsBar';
 import AllocationCharts from './AllocationCharts';
+import GlobalAllocationMap from './GlobalAllocationMap';
 import { Scale, BarChart3, TrendingUp, TrendingDown, Percent } from 'lucide-react';
 
 interface AnalyticsViewProps {
@@ -22,6 +23,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ portfolioData }) => {
     const [visibleKpis, setVisibleKpis] = useState<string[]>(['patrimonioTotal', 'totalGanhos', 'totalPerdas', 'lucroPrejuizoPercentual']);
 
     const derivedData = useMemo(() => {
+        const USD_BRL_RATE = 5.25;
         let patrimonioTotal = 0;
         let totalInvestido = 0;
         let totalGanhos = 0;
@@ -29,18 +31,21 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ portfolioData }) => {
         let proventosAnuaisEstimados = 0;
     
         portfolioData.forEach(asset => {
-            const valorAtual = asset.cotacaoAtual * asset.quantidade;
-            const custoTotal = asset.precoCompra * asset.quantidade;
-            const lucroPrejuizo = valorAtual - custoTotal;
+            const purchaseRate = asset.moedaCompra === 'USD' || asset.moedaCompra === 'USDT' ? USD_BRL_RATE : 1;
+            const currentRate = asset.moedaCotacao === 'USD' ? USD_BRL_RATE : 1;
+            
+            const valorAtualEmBRL = asset.cotacaoAtual * asset.quantidade * currentRate;
+            const custoTotalEmBRL = asset.precoCompra * asset.quantidade * purchaseRate;
+            const lucroPrejuizoEmBRL = valorAtualEmBRL - custoTotalEmBRL;
     
-            patrimonioTotal += valorAtual;
-            totalInvestido += custoTotal;
-            proventosAnuaisEstimados += valorAtual * asset.dividendYield;
+            patrimonioTotal += valorAtualEmBRL;
+            totalInvestido += custoTotalEmBRL;
+            proventosAnuaisEstimados += valorAtualEmBRL * (asset.dividendYield || 0);
     
-            if (lucroPrejuizo > 0) {
-                totalGanhos += lucroPrejuizo;
+            if (lucroPrejuizoEmBRL > 0) {
+                totalGanhos += lucroPrejuizoEmBRL;
             } else {
-                totalPerdas += lucroPrejuizo;
+                totalPerdas += lucroPrejuizoEmBRL;
             }
         });
     
@@ -77,6 +82,8 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ portfolioData }) => {
                     onSaveKpis={handleSaveKpis}
                 />
             </div>
+
+            <GlobalAllocationMap portfolioData={portfolioData} />
             
             <AllocationCharts portfolioData={portfolioData} />
 

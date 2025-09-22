@@ -35,13 +35,15 @@ const DashboardAllocationChart: React.FC<DashboardAllocationChartProps> = ({ por
     const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
     const { allocationData, totalValue } = useMemo(() => {
+        const USD_BRL_RATE = 5.25;
         const dataMap = new Map<string, number>();
         let total = 0;
         portfolioData.forEach(asset => {
             const key = asset[activeTab];
-            const value = asset.cotacaoAtual * asset.quantidade;
-            dataMap.set(key, (dataMap.get(key) || 0) + value);
-            total += value;
+            const currentRate = asset.moedaCotacao === 'USD' ? USD_BRL_RATE : 1;
+            const valueInBRL = asset.cotacaoAtual * asset.quantidade * currentRate;
+            dataMap.set(key, (dataMap.get(key) || 0) + valueInBRL);
+            total += valueInBRL;
         });
 
         const sortedData = Array.from(dataMap.entries())

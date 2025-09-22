@@ -23,9 +23,9 @@ const AddAssetChoiceModal: React.FC<AddAssetChoiceModalProps> = ({ isOpen, onClo
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-center z-50 p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-end sm:items-center z-50 p-0 sm:p-4" onClick={onClose}>
             <div
-                className="bg-white dark:bg-slate-800 w-full max-w-2xl p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 animate-fade-in-scale-up"
+                className="bg-white dark:bg-slate-800 w-full max-w-2xl p-6 rounded-t-2xl sm:rounded-2xl shadow-2xl border-t sm:border border-slate-200 dark:border-slate-700 animate-fade-in-scale-up"
                 onClick={(e) => e.stopPropagation()}
             >
                 <header className="flex items-center justify-between mb-6">

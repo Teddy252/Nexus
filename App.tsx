@@ -36,7 +36,7 @@ const NovatosView = lazy(() => import('./components/NovatosView.tsx'));
 const NotificacoesView = lazy(() => import('./components/NotificacoesView.tsx'));
 const AccountView = lazy(() => import('./components/AccountView.tsx'));
 
-// Taxa de câmbio fixa para conversão de USD para BRL
+// Taxa de câmbio fixa para conversão de USD para BRL. Usada consistentemente em toda a aplicação.
 const USD_BRL_RATE = 5.25;
 
 const swipeableViews = ['dashboard', 'carteira', 'novatos', 'analise', 'ia'];
@@ -71,6 +71,7 @@ const mapAssetFromDb = (dbAsset: any): Asset => ({
     historicoPreco: dbAsset.historico_preco,
     dividendYield: dbAsset.dividend_yield,
     moedaCompra: dbAsset.moeda_compra || (dbAsset.categoria === 'Cripto' || dbAsset.pais === 'EUA' ? 'USD' : 'BRL'),
+    moedaCotacao: dbAsset.moeda_cotacao || (dbAsset.categoria === 'Cripto' || dbAsset.pais === 'EUA' ? 'USD' : 'BRL'),
     alertActive: dbAsset.alert_active,
     alertPriceSuperior: dbAsset.alert_price_superior,
     alertPriceInferior: dbAsset.alert_price_inferior,
@@ -243,9 +244,8 @@ const MainApp: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         let proventosAnuaisEstimados = 0;
     
         portfolioData.forEach(asset => {
-            const isUsdBased = asset.pais === 'EUA' || asset.categoria === 'Cripto';
             const purchaseRate = asset.moedaCompra === 'USD' || asset.moedaCompra === 'USDT' ? USD_BRL_RATE : 1;
-            const currentRate = isUsdBased ? USD_BRL_RATE : 1;
+            const currentRate = asset.moedaCotacao === 'USD' ? USD_BRL_RATE : 1;
 
             const custoTotalEmBRL = asset.precoCompra * asset.quantidade * purchaseRate;
             const valorAtualEmBRL = asset.cotacaoAtual * asset.quantidade * currentRate;
@@ -253,7 +253,7 @@ const MainApp: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     
             patrimonioTotal += valorAtualEmBRL;
             totalInvestido += custoTotalEmBRL;
-            proventosAnuaisEstimados += valorAtualEmBRL * asset.dividendYield;
+            proventosAnuaisEstimados += valorAtualEmBRL * (asset.dividendYield || 0);
     
             if (lucroPrejuizoEmBRL > 0) {
                 totalGanhos += lucroPrejuizoEmBRL;
@@ -375,12 +375,12 @@ const MainApp: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         else setNotifications([]);
     };
 
-    const handleSaveAsset = async (assetData: Omit<Asset, 'id' | 'historicoPreco' | 'cotacaoAtual' | 'cotacaoBase' | 'order_index'> & { id?: number }) => {
+    const handleSaveAsset = async (assetData: Omit<Asset, 'id' | 'historicoPreco' | 'cotacaoBase' | 'order_index'> & { id?: number }) => {
         if (!currentUser) return;
-
+    
         const isEditing = editingAsset && assetData.id;
-
-        const payload = {
+    
+        const basePayload = {
             ticker: assetData.ticker,
             nome: assetData.nome,
             pais: assetData.pais,
@@ -391,31 +391,42 @@ const MainApp: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             dividend_yield: assetData.dividendYield,
             risk_profile: assetData.riskProfile,
             moeda_compra: assetData.moedaCompra,
+            moeda_cotacao: assetData.moedaCotacao,
             alert_active: assetData.alertActive,
             alert_price_superior: assetData.alertPriceSuperior,
             alert_price_inferior: assetData.alertPriceInferior,
-            historico_preco: editingAsset?.historicoPreco || Array(7).fill(assetData.precoCompra),
-            cotacao_base: editingAsset?.cotacaoBase || assetData.precoCompra,
-            cotacao_atual: editingAsset?.cotacaoAtual || assetData.precoCompra,
         };
-
+    
         if (isEditing) {
+            // For editing, we only update form fields, keeping existing price data.
             const { error } = await supabase
                 .from('ativos')
-                .update(payload)
+                .update(basePayload)
                 .eq('id', editingAsset.id)
                 .eq('user_id', currentUser.id);
-
+    
             if (error) { console.error('Error updating asset:', error); return; }
         } else {
+            // For a new asset, we use the fetched current price and generate history.
+            const cotacaoAtual = assetData.cotacaoAtual || assetData.precoCompra; // Fallback to purchase price if fetch fails
             const maxOrderIndex = portfolioData.reduce((max, asset) => Math.max(asset.order_index, max), -1);
             
+            const newAssetPayload = {
+                ...basePayload,
+                user_id: currentUser.id,
+                order_index: maxOrderIndex + 1,
+                cotacao_atual: cotacaoAtual,
+                cotacao_base: cotacaoAtual, // Base price starts at current price
+                historico_preco: [...Array(6).fill(cotacaoAtual), cotacaoAtual] // A simple flat history for now
+            };
+    
             const { error } = await supabase
                 .from('ativos')
-                .insert([{ ...payload, user_id: currentUser.id, order_index: maxOrderIndex + 1 }]);
+                .insert([newAssetPayload]);
             
             if (error) { console.error('Error creating asset:', error); return; }
         }
+    
         await loadUserData();
         setIsAssetModalOpen(false);
         setEditingAsset(null);
@@ -450,6 +461,7 @@ const MainApp: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             dividend_yield: assetToDuplicate.dividendYield,
             risk_profile: assetToDuplicate.riskProfile,
             moeda_compra: assetToDuplicate.moedaCompra,
+            moeda_cotacao: assetToDuplicate.moedaCotacao,
             alert_active: assetToDuplicate.alertActive,
             alert_price_superior: assetToDuplicate.alertPriceSuperior,
             alert_price_inferior: assetToDuplicate.alertPriceInferior,
@@ -545,6 +557,7 @@ const MainApp: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                         historico_preco: Array(7).fill(s.precoAtual),
                         dividend_yield: 0,
                         moeda_compra: isUsdBased ? 'USD' : 'BRL',
+                        moeda_cotacao: isUsdBased ? 'USD' : 'BRL',
                         order_index: maxOrderIndex + 1,
                     };
                     dbOperations.push(supabase.from('ativos').insert([newAssetPayload]));
@@ -593,6 +606,7 @@ const MainApp: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 dividend_yield: asset.dividendYield,
                 risk_profile: asset.riskProfile,
                 moeda_compra: asset.moedaCompra,
+                moeda_cotacao: asset.moedaCotacao,
                 alert_active: asset.alertActive,
                 alert_price_superior: asset.alertPriceSuperior,
                 alert_price_inferior: asset.alertPriceInferior,
@@ -670,7 +684,7 @@ const MainApp: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             if (areAllCurrentlySelected) {
                 assetIds.forEach(id => newSet.delete(id));
             } else {
-                assetIds.forEach(id => newSet.add(id);
+                assetIds.forEach(id => newSet.add(id));
             }
             return newSet;
         });
@@ -714,6 +728,7 @@ const MainApp: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 dividend_yield: asset.dividendYield,
                 risk_profile: asset.riskProfile,
                 moeda_compra: asset.moedaCompra,
+                moeda_cotacao: asset.moedaCotacao,
                 alert_active: asset.alertActive,
                 alert_price_superior: asset.alertPriceSuperior,
                 alert_price_inferior: asset.alertPriceInferior,
@@ -848,6 +863,7 @@ const MainApp: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                     onNavigate={setActiveView}
                     derivedData={derivedData}
                     onSelectAsset={handleSelectAssetAndNavigate}
+                    proventosData={proventosData}
                     notifications={notifications}
                     unreadCount={unreadCount}
                     onMarkAsRead={handleMarkAsRead}
@@ -916,7 +932,7 @@ const MainApp: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 onLogout={onLogout}
                 unreadNotificationsCount={unreadCount}
             />
-             <main ref={contentRef} className={`relative flex-grow transition-all duration-300 pb-16 lg:pb-0 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+             <main ref={contentRef} className={`relative flex-grow transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
                 <div 
                     className="absolute -top-4 left-0 right-0 flex justify-center pt-4 transition-opacity duration-300 z-0"
                     style={{ opacity: isRefreshing || touchDelta.y > 0 ? 1 : 0, pointerEvents: 'none' }}
@@ -926,7 +942,7 @@ const MainApp: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                     </div>
                 </div>
                  <div style={contentStyle} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-                    <div className="p-4 pt-20 sm:p-6 lg:p-8 md:pt-4">
+                    <div className="px-4 pt-20 pb-16 md:p-6 lg:p-8">
                         <Suspense fallback={<LoadingFallback />}>
                            {renderView()}
                         </Suspense>

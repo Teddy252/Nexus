@@ -13,22 +13,27 @@ export interface ColumnDef {
 const allColumns: ColumnDef[] = [
     { key: 'ativo', label: 'Ativo', className: 'p-4' },
     { key: 'quantidade', label: 'Quantidade', className: 'p-4 text-right' },
-    { key: 'precoAtual', label: 'Preço Atual', className: 'p-4 text-center' },
+    { key: 'precoMedio', label: 'Preço Médio', className: 'p-4 text-right' },
+    { key: 'precoAtual', label: 'Preço Atual', className: 'p-4 text-right' },
     { key: 'valorMercado', label: 'Valor Mercado', className: 'p-4 text-right' },
-    { key: 'lucroPrejuizo', label: 'Lucro/Prejuízo', className: 'p-4 text-right' },
-    { key: 'tendencia', label: 'Tendência (7d)', className: 'p-4 text-right' },
+    { key: 'valorBRL', label: 'Valor em BRL', className: 'p-4 text-right' },
+    { key: 'lucroPrejuizo', label: 'L/P (R$)', className: 'p-4 text-right' },
+    { key: 'rentabilidade', label: 'Rentabilidade', className: 'p-4 text-right' },
     { key: 'acoes', label: 'Ações', className: 'p-4 text-center w-24' },
 ];
 
 const columnVisibility: Record<string, ('detailed' | 'simple')[]> = {
     'ativo': ['detailed', 'simple'],
-    'quantidade': ['simple'],
-    'precoAtual': ['detailed', 'simple'],
+    'quantidade': ['detailed'],
+    'precoMedio': ['detailed'],
+    'precoAtual': ['detailed'],
     'valorMercado': ['detailed', 'simple'],
+    'valorBRL': ['detailed'],
     'lucroPrejuizo': ['detailed'],
-    'tendencia': ['detailed'],
+    'rentabilidade': ['detailed', 'simple'],
     'acoes': ['detailed', 'simple'],
 };
+
 
 interface PortfolioTableProps {
     assets: Asset[];
@@ -50,14 +55,14 @@ const AssetCard: React.FC<any> = ({ asset, onEdit, onDelete, onDuplicate, onTogg
     const menuRef = useRef<HTMLDivElement>(null);
     const USD_BRL_RATE = 5.25;
 
-    const { valorMercadoEmBRL, lucroPrejuizoEmBRL } = useMemo(() => {
-        const isUsdBased = asset.pais === 'EUA' || asset.categoria === 'Cripto';
+    const { valorMercadoEmBRL, lucroPrejuizoEmBRL, rentabilidade } = useMemo(() => {
         const purchaseRate = asset.moedaCompra === 'USD' || asset.moedaCompra === 'USDT' ? USD_BRL_RATE : 1;
-        const currentRate = isUsdBased ? USD_BRL_RATE : 1;
+        const currentRate = asset.moedaCotacao === 'USD' ? USD_BRL_RATE : 1;
         const custoTotalEmBRL = asset.precoCompra * asset.quantidade * purchaseRate;
         const valorMercadoEmBRL = asset.cotacaoAtual * asset.quantidade * currentRate;
         const lucroPrejuizoEmBRL = valorMercadoEmBRL - custoTotalEmBRL;
-        return { valorMercadoEmBRL, lucroPrejuizoEmBRL };
+        const rentabilidade = custoTotalEmBRL > 0 ? (lucroPrejuizoEmBRL / custoTotalEmBRL) * 100 : 0;
+        return { valorMercadoEmBRL, lucroPrejuizoEmBRL, rentabilidade };
     }, [asset]);
 
     const lpColor = lucroPrejuizoEmBRL >= 0 ? 'text-emerald-500' : 'text-red-500';
@@ -104,8 +109,8 @@ const AssetCard: React.FC<any> = ({ asset, onEdit, onDelete, onDuplicate, onTogg
                             <p className="font-semibold text-slate-700 dark:text-slate-200">{formatCurrency(convertValue(valorMercadoEmBRL))}</p>
                         </div>
                         <div className="text-right">
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Lucro/Prejuízo</p>
-                            <p className={`font-semibold ${lpColor}`}>{formatCurrency(convertValue(lucroPrejuizoEmBRL))}</p>
+                             <p className="text-xs text-slate-500 dark:text-slate-400">Rentabilidade</p>
+                             <p className={`font-semibold ${lpColor}`}>{rentabilidade.toFixed(2)}%</p>
                         </div>
                     </div>
                 </div>

@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Asset } from '../types.ts';
 import { getAssetDetails, getBrokerageSuggestions, getDividendYield } from '../services/geminiService.ts';
-import { Sparkles, Loader2, X, ArrowRight, Check, Building, AlertTriangle } from 'lucide-react';
+import { useDebounce } from '../hooks/useDebounce.ts';
+import { Loader2, X, ArrowRight, Check, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface AssetModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (asset: Omit<Asset, 'id' | 'historicoPreco' | 'cotacaoAtual' | 'cotacaoBase' | 'order_index'> & { id?: number }) => void;
+    onSave: (asset: Omit<Asset, 'id' | 'historicoPreco' | 'cotacaoBase' | 'order_index'> & { id?: number }) => void;
     asset: Asset | null;
 }
 
@@ -14,22 +15,48 @@ const formInputClasses = "block w-full bg-slate-100 dark:bg-slate-900 border-sla
 
 const initialFormState = {
     ticker: '', nome: '', pais: '', categoria: 'Ações', corretora: '',
-    quantidade: '', precoCompra: '', dividendYield: '', moedaCompra: 'BRL' as 'BRL' | 'USD' | 'USDT',
+    quantidade: '', precoCompra: '', cotacaoAtual: '', dividendYield: '', 
+    moedaCompra: 'BRL' as 'BRL' | 'USD' | 'USDT',
+    moedaCotacao: 'BRL' as 'BRL' | 'USD',
     riskProfile: 'Moderado' as 'Seguro' | 'Moderado' | 'Arriscado',
     alertActive: false, alertPriceSuperior: '', alertPriceInferior: '',
 };
+
+const USD_BRL_RATE = 5.25;
 
 const AssetModal: React.FC<AssetModalProps> = ({ isOpen, onClose, onSave, asset }) => {
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState(initialFormState);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
+    const [analysisSuccess, setAnalysisSuccess] = useState(false);
     const [brokerageSuggestions, setBrokerageSuggestions] = useState<string[]>([]);
+    
+    const debouncedTicker = useDebounce(formData.ticker, 500);
+
+    const brlFormatter = useMemo(() => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }), []);
+    const usdFormatter = useMemo(() => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }), []);
+
+    const formatPurchaseCurrency = useCallback((value: number) => {
+        if (formData.moedaCompra === 'USD' || formData.moedaCompra === 'USDT') {
+            return usdFormatter.format(value);
+        }
+        return brlFormatter.format(value);
+    }, [formData.moedaCompra, brlFormatter, usdFormatter]);
+    
+    const formatMarketCurrency = useCallback((value: number) => {
+        if (formData.moedaCotacao === 'USD') {
+            return usdFormatter.format(value);
+        }
+        return brlFormatter.format(value);
+    }, [formData.moedaCotacao, brlFormatter, usdFormatter]);
+
 
     const resetAndClose = () => {
         setFormData(initialFormState);
         setStep(1);
         setAnalysisError(null);
+        setAnalysisSuccess(false);
         onClose();
     };
 
@@ -39,12 +66,17 @@ const AssetModal: React.FC<AssetModalProps> = ({ isOpen, onClose, onSave, asset 
                 setFormData({
                     ticker: asset.ticker, nome: asset.nome, pais: asset.pais, categoria: asset.categoria, corretora: asset.corretora,
                     quantidade: String(asset.quantidade), precoCompra: String(asset.precoCompra), dividendYield: String(asset.dividendYield * 100),
-                    moedaCompra: asset.moedaCompra || 'BRL', riskProfile: asset.riskProfile, alertActive: asset.alertActive ?? false,
+                    cotacaoAtual: String(asset.cotacaoAtual),
+                    moedaCompra: asset.moedaCompra || 'BRL',
+                    moedaCotacao: asset.moedaCotacao || (asset.categoria === 'Cripto' || asset.pais === 'EUA' ? 'USD' : 'BRL'),
+                    riskProfile: asset.riskProfile, alertActive: asset.alertActive ?? false,
                     alertPriceSuperior: String(asset.alertPriceSuperior ?? ''), alertPriceInferior: String(asset.alertPriceInferior ?? ''),
                 });
+                setAnalysisSuccess(true);
             } else {
                 const savedBrokerage = localStorage.getItem('lastUsedBrokerage');
                 setFormData(prev => ({ ...initialFormState, corretora: savedBrokerage || '' }));
+                setAnalysisSuccess(false);
             }
             setStep(1);
         }
@@ -70,43 +102,63 @@ const AssetModal: React.FC<AssetModalProps> = ({ isOpen, onClose, onSave, asset 
         }
     }, [formData.categoria]);
 
-     useEffect(() => {
-        switch (formData.categoria) {
-            case 'Cripto': setFormData(prev => ({ ...prev, riskProfile: 'Arriscado', moedaCompra: 'USD' })); break;
-            case 'Tesouro Direto': case 'FIIs': setFormData(prev => ({ ...prev, riskProfile: 'Seguro', moedaCompra: 'BRL' })); break;
-            default: setFormData(prev => ({ ...prev, moedaCompra: prev.pais === 'EUA' ? 'USD' : 'BRL' })); break;
-        }
-    }, [formData.categoria, formData.pais]);
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { id, value, type } = e.target;
+        if (id === 'ticker') {
+             setAnalysisSuccess(false);
+             setAnalysisError(null);
+        }
         if (type === 'checkbox') setFormData(prev => ({ ...prev, [id]: (e.target as HTMLInputElement).checked }));
         else setFormData(prev => ({ ...prev, [id]: value }));
     };
 
-    const handleAnalyzeTicker = async () => {
-        if (!formData.ticker) return;
+    const handleAnalyzeTicker = useCallback(async (ticker: string) => {
+        if (!ticker) return;
         setIsAnalyzing(true);
         setAnalysisError(null);
+        setAnalysisSuccess(false);
         try {
-            const details = await getAssetDetails(formData.ticker);
-            const dy = await getDividendYield(formData.ticker, details.pais);
-            setFormData(prev => ({ ...prev, nome: details.nome, categoria: details.categoria, pais: details.pais, dividendYield: dy.toString() }));
+            const details = await getAssetDetails(ticker);
+            const dy = await getDividendYield(ticker, details.pais);
+            setFormData(prev => ({ 
+                ...prev, 
+                nome: details.nome, 
+                categoria: details.categoria, 
+                pais: details.pais, 
+                cotacaoAtual: details.cotacaoAtual.toString(),
+                moedaCotacao: details.moedaCotacao,
+                dividendYield: dy.toString() 
+            }));
+            setAnalysisSuccess(true);
         } catch (error) {
             setAnalysisError("Não foi possível buscar os dados. Verifique o código ou preencha manualmente.");
+            setAnalysisSuccess(false);
         } finally {
             setIsAnalyzing(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        const isEditing = !!asset;
+        if (debouncedTicker && !isEditing) {
+            handleAnalyzeTicker(debouncedTicker);
+        }
+    }, [debouncedTicker, asset, handleAnalyzeTicker]);
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const assetToSave = {
-            ...formData, id: asset?.id, quantidade: parseFloat(formData.quantidade), precoCompra: parseFloat(formData.precoCompra) || 0,
-            dividendYield: parseFloat(formData.dividendYield) / 100 || 0, riskProfile: formData.riskProfile,
+            ...formData, 
+            id: asset?.id, 
+            quantidade: parseFloat(formData.quantidade), 
+            precoCompra: parseFloat(formData.precoCompra) || 0,
+            cotacaoAtual: parseFloat(formData.cotacaoAtual) || 0,
+            dividendYield: parseFloat(formData.dividendYield) / 100 || 0, 
+            riskProfile: formData.riskProfile,
             alertPriceSuperior: formData.alertPriceSuperior ? parseFloat(formData.alertPriceSuperior) : undefined,
             alertPriceInferior: formData.alertPriceInferior ? parseFloat(formData.alertPriceInferior) : undefined,
-        } as Omit<Asset, 'historicoPreco' | 'cotacaoAtual' | 'cotacaoBase' | 'order_index'> & { id?: number};
+        } as Omit<Asset, 'historicoPreco' | 'cotacaoBase' | 'order_index'> & { id?: number};
         if (assetToSave.corretora) localStorage.setItem('lastUsedBrokerage', assetToSave.corretora);
         onSave(assetToSave);
         resetAndClose();
@@ -114,6 +166,16 @@ const AssetModal: React.FC<AssetModalProps> = ({ isOpen, onClose, onSave, asset 
 
     const isStep1Valid = formData.ticker && formData.nome && formData.categoria && formData.pais;
     const isStep2Valid = formData.quantidade && formData.corretora;
+    
+    const quantidadeNum = parseFloat(formData.quantidade) || 0;
+    const precoCompraNum = parseFloat(formData.precoCompra) || 0;
+    const cotacaoAtualNum = parseFloat(formData.cotacaoAtual) || 0;
+
+    const purchaseRate = (formData.moedaCompra === 'USD' || formData.moedaCompra === 'USDT') ? USD_BRL_RATE : 1;
+    const custoTotalCompraEmBRL = (quantidadeNum * precoCompraNum) * purchaseRate;
+
+    const currentRate = formData.moedaCotacao === 'USD' ? USD_BRL_RATE : 1;
+    const valorMercadoAtualEmBRL = (quantidadeNum * cotacaoAtualNum) * currentRate;
 
     const renderProgressBar = () => (
         <div className="flex items-center mb-6">
@@ -143,10 +205,16 @@ const AssetModal: React.FC<AssetModalProps> = ({ isOpen, onClose, onSave, asset 
                     <div>
                         <label htmlFor="ticker" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">{modalConfig.tickerLabel}</label>
                         <div className="relative">
-                            <input type="text" id="ticker" value={formData.ticker} onChange={handleChange} required placeholder={modalConfig.tickerPlaceholder} className={`${formInputClasses} pr-28`} />
-                            <button type="button" onClick={handleAnalyzeTicker} disabled={!formData.ticker || isAnalyzing} className="absolute right-1.5 top-1.5 flex items-center gap-2 bg-sky-600 hover:bg-sky-500 disabled:bg-sky-400 dark:disabled:bg-sky-800 text-white font-semibold py-1.5 px-3 rounded-md text-sm">
-                                {isAnalyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Sparkles className="h-4 w-4" /> Analisar</>}
-                            </button>
+                            <input type="text" id="ticker" value={formData.ticker} onChange={handleChange} required placeholder={modalConfig.tickerPlaceholder} className={`${formInputClasses} pr-12`} disabled={!!asset} />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                                {isAnalyzing ? (
+                                    <Loader2 className="h-5 w-5 text-slate-400 animate-spin" />
+                                ) : analysisSuccess ? (
+                                    <CheckCircle className="h-5 w-5 text-emerald-500" />
+                                ) : analysisError ? (
+                                    <AlertCircle className="h-5 w-5 text-red-500" />
+                                ) : null}
+                            </div>
                         </div>
                         {analysisError && <p className="text-xs text-red-500 mt-1">{analysisError}</p>}
                     </div>
@@ -164,16 +232,51 @@ const AssetModal: React.FC<AssetModalProps> = ({ isOpen, onClose, onSave, asset 
                     </div>
                     <div>
                         <label htmlFor="pais" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">País</label>
-                        <input type="text" id="pais" value={formData.pais} onChange={handleChange} required disabled={isAnalyzing} placeholder="Ex: Brasil, EUA" className={formInputClasses} />
+                        <input type="text" id="pais" value={formData.pais} onChange={handleChange} required disabled={isAnalyzing} placeholder="Ex: Brasil, EUA, Global" className={formInputClasses} />
                     </div>
                 </div>
             );
             case 2: return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div><label htmlFor="quantidade" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Quantidade</label><input type="number" step="0.000001" id="quantidade" value={formData.quantidade} onChange={handleChange} required className={formInputClasses} /></div>
-                    <div><label htmlFor="precoCompra" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">{modalConfig.priceLabel}</label><input type="number" step="0.01" id="precoCompra" value={formData.precoCompra} onChange={handleChange} placeholder="Opcional" className={formInputClasses} /></div>
-                    <div className="sm:col-span-2"><label htmlFor="corretora" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">{modalConfig.brokerLabel}</label><input type="text" id="corretora" value={formData.corretora} onChange={handleChange} required list="brokerage-list" className={formInputClasses} /><datalist id="brokerage-list">{brokerageSuggestions.map(b => <option key={b} value={b} />)}</datalist></div>
-                    <div className="sm:col-span-2"><label htmlFor="riskProfile" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Perfil de Risco</label><select id="riskProfile" value={formData.riskProfile} onChange={handleChange} disabled={modalConfig.disableRisk} className={formInputClasses}><option value="Seguro">Seguro</option><option value="Moderado">Moderado</option><option value="Arriscado">Arriscado</option></select></div>
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="quantidade" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Quantidade</label>
+                            <input type="number" step="0.000001" id="quantidade" value={formData.quantidade} onChange={handleChange} required className={formInputClasses} />
+                        </div>
+                        <div>
+                            <label htmlFor="precoCompra" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">{modalConfig.priceLabel}</label>
+                            <input type="number" step="any" id="precoCompra" value={formData.precoCompra} onChange={handleChange} placeholder="Opcional" className={formInputClasses} />
+                        </div>
+                    </div>
+                    <div>
+                        <label htmlFor="moedaCompra" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Moeda da Compra</label>
+                        <select id="moedaCompra" value={formData.moedaCompra} onChange={handleChange} required className={formInputClasses}>
+                            <option value="BRL">BRL (R$)</option>
+                            <option value="USD">USD (US$)</option>
+                            <option value="USDT">USDT (US$)</option>
+                        </select>
+                    </div>
+                     {quantidadeNum > 0 && (
+                        <div className="sm:col-span-2 mt-2 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
+                            {precoCompraNum > 0 && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-500 dark:text-slate-400">Custo Total (em BRL):</span>
+                                    <span className="font-semibold text-slate-700 dark:text-slate-200">{brlFormatter.format(custoTotalCompraEmBRL)}</span>
+                                </div>
+                            )}
+                            {cotacaoAtualNum > 0 && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-slate-500 dark:text-slate-400">Valor de Mercado (em BRL):</span>
+                                    <span className="font-semibold text-slate-700 dark:text-slate-200">{brlFormatter.format(valorMercadoAtualEmBRL)}</span>
+                                </div>
+                            )}
+                            {(formData.moedaCotacao === 'USD' || formData.moedaCompra === 'USD' || formData.moedaCompra === 'USDT') && (
+                                 <p className="text-xs text-slate-400 text-center pt-1 border-t border-slate-200 dark:border-slate-700/50 mt-2">Câmbio utilizado: US$ 1,00 = R$ {USD_BRL_RATE.toFixed(2)}</p>
+                            )}
+                        </div>
+                    )}
+                    <div><label htmlFor="corretora" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">{modalConfig.brokerLabel}</label><input type="text" id="corretora" value={formData.corretora} onChange={handleChange} required list="brokerage-list" className={formInputClasses} /><datalist id="brokerage-list">{brokerageSuggestions.map(b => <option key={b} value={b} />)}</datalist></div>
+                    <div><label htmlFor="riskProfile" className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Perfil de Risco</label><select id="riskProfile" value={formData.riskProfile} onChange={handleChange} disabled={modalConfig.disableRisk} className={formInputClasses}><option value="Seguro">Seguro</option><option value="Moderado">Moderado</option><option value="Arriscado">Arriscado</option></select></div>
                 </div>
             );
             case 3: return (

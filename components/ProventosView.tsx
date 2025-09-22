@@ -95,21 +95,27 @@ const ProventosView: React.FC<ProventosViewProps> = ({ portfolioData, proventosD
     }, [year, monthlyData]);
 
     const kpiData = useMemo(() => {
-        const totalRecebido = monthlyData.reduce((sum, m) => sum + m.total, 0);
-        
-        const totalInvestidoDividendPayers = [...new Set(proventosData.filter(p => new Date(p.date).getUTCFullYear() === year).map(p => p.assetId))]
-            .reduce((total, assetId) => {
-                const asset = assetMap.get(assetId);
-                return total + (asset ? asset.precoCompra * asset.quantidade : 0);
-            }, 0);
+        const USD_BRL_RATE = 5.25;
+        const totalRecebidoBRL = monthlyData.reduce((sum, m) => sum + m.total, 0);
 
-        const yoc = totalInvestidoDividendPayers > 0 ? (totalRecebido / convertValue(totalInvestidoDividendPayers)) * 100 : 0;
+        const dividendPayersInYear = new Set(proventosData
+            .filter(p => new Date(p.date).getUTCFullYear() === year)
+            .map(p => p.assetId));
+        
+        const totalInvestidoDividendPayersBRL = Array.from(dividendPayersInYear).reduce((total, assetId) => {
+            const asset = assetMap.get(assetId);
+            if (!asset) return total;
+            const purchaseRate = asset.moedaCompra === 'USD' || asset.moedaCompra === 'USDT' ? USD_BRL_RATE : 1;
+            return total + (asset.precoCompra * asset.quantidade * purchaseRate);
+        }, 0);
+
+        const yoc = totalInvestidoDividendPayersBRL > 0 ? (totalRecebidoBRL / convertValue(totalInvestidoDividendPayersBRL)) * 100 : 0;
         
         const monthlyTotals = monthlyData.map(m => m.total);
         const maxMonthValue = Math.max(...monthlyTotals);
         const mesMaiorRenda = maxMonthValue > 0 ? monthlyData[monthlyTotals.indexOf(maxMonthValue)].name : 'N/A';
 
-        return { totalRecebido, yoc, mesMaiorRenda };
+        return { totalRecebido: totalRecebidoBRL, yoc, mesMaiorRenda };
     }, [monthlyData, assetMap, proventosData, year, convertValue]);
     
     const selectedMonthData = selectedMonthIndex !== null ? monthlyData[selectedMonthIndex] : null;

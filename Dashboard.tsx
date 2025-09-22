@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { Asset, KpiConfig, Notification } from './types.ts';
+import { Asset, KpiConfig, Notification, Provento } from './types.ts';
 import html2canvas from 'html2canvas';
 import { generatePortfolioPdf } from './services/pdfService.ts';
 import { Scale, BarChart3, TrendingUp, TrendingDown, Percent, Edit, Save, X, GripVertical, PlusCircle, XCircle, BarChart } from 'lucide-react';
@@ -57,6 +57,7 @@ interface DashboardProps {
     onNavigate: (view: string) => void;
     derivedData: { [key: string]: number; };
     onSelectAsset: (ticker: string) => void;
+    proventosData: Provento[];
     notifications: Notification[];
     unreadCount: number;
     onMarkAsRead: (id: string) => void;
@@ -74,7 +75,7 @@ const getColSpanClass = (span: number) => {
 
 const Dashboard: React.FC<DashboardProps> = ({
     portfolioData, isDataLoaded, onAiAnalysis,
-    onOptimizePortfolio, onLogout, onNavigate, derivedData, onSelectAsset,
+    onOptimizePortfolio, onLogout, onNavigate, derivedData, onSelectAsset, proventosData,
     notifications, unreadCount, onMarkAsRead, onMarkAllAsRead, onNotificationClick
 }) => {
     const evolutionChartRef = useRef<HTMLDivElement>(null);
@@ -184,7 +185,12 @@ const Dashboard: React.FC<DashboardProps> = ({
             );
         }
         switch (id) {
-            case 'patrimonialEvolution': return <PatrimonialEvolutionChart portfolioData={portfolioData} ref={evolutionChartRef} />;
+            case 'patrimonialEvolution': return <PatrimonialEvolutionChart 
+                portfolioData={portfolioData} 
+                proventosData={proventosData}
+                notifications={notifications}
+                ref={evolutionChartRef} 
+            />;
             case 'dashboardAllocation': return <DashboardAllocationChart portfolioData={portfolioData} onNavigate={onNavigate} />;
             case 'marketPulse': return <MarketPulse />;
             default: return null;

@@ -23,7 +23,13 @@ const CURRENCY_FORMATTERS: { [key in Currency]: Intl.NumberFormat } = {
     EUR: new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }),
 };
 
-export const CurrencyContext = createContext<CurrencyContextType>(null!);
+export const CurrencyContext = createContext<CurrencyContextType>({
+    selectedCurrency: 'BRL',
+    rates: MOCK_RATES,
+    setCurrency: () => console.warn('CurrencyProvider not found'),
+    convertValue: (brlValue) => brlValue, // Default conversion is 1:1
+    formatCurrency: (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value),
+});
 
 export const CurrencyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [selectedCurrency, setSelectedCurrency] = useState<Currency>(() => {

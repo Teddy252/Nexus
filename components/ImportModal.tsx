@@ -67,6 +67,8 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
                 corretora: asset.corretora || 'N/A',
                 pais: pais,
                 moedaCompra: (pais === 'EUA' || categoria === 'Cripto') ? 'USD' : 'BRL',
+                // FIX: Add missing 'moedaCotacao' property to conform to Asset type.
+                moedaCotacao: (pais === 'EUA' || categoria === 'Cripto') ? 'USD' : 'BRL',
                 riskProfile: categoria === 'Cripto' ? 'Arriscado' : (['FIIs', 'Tesouro Direto'].includes(categoria) ? 'Seguro' : 'Moderado'),
                 historicoPreco: Array(7).fill(preco),
                 dividendYield: 0,
@@ -239,18 +241,18 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
     }
     
     return (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 w-full max-w-2xl rounded-xl shadow-2xl flex flex-col">
-                <header className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-700">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-end sm:items-center z-50 p-0 sm:p-4" onClick={handleClose}>
+            <div className="bg-white dark:bg-slate-800 border-t sm:border border-slate-200 dark:border-slate-700 w-full max-w-2xl rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col h-[90vh] sm:h-auto sm:max-h-[90vh]">
+                <header className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Importação Inteligente</h2>
                     <button onClick={handleClose} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 rounded-full">
                         <X className="h-6 w-6" />
                     </button>
                 </header>
-                <main className="p-6">
+                <main className="p-6 flex-grow overflow-y-auto">
                     {renderContent()}
                 </main>
-                <footer className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end items-center gap-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-b-xl">
+                <footer className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end items-center gap-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-b-xl flex-shrink-0">
                     <button type="button" onClick={handleClose} className="py-2 px-5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg font-semibold text-slate-700 dark:text-slate-300 transition-colors">
                         Cancelar
                     </button>

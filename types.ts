@@ -28,6 +28,7 @@ export interface Asset {
     historicoPreco: number[];
     dividendYield: number; // Annual yield, e.g., 0.05 for 5%
     moedaCompra: 'BRL' | 'USD' | 'USDT';
+    moedaCotacao: 'BRL' | 'USD';
     alertActive?: boolean;
     alertPriceSuperior?: number;
     alertPriceInferior?: number;
@@ -91,7 +92,8 @@ export interface AiOptimizationAnalysis {
 export interface ChartDataPoint {
     date: string;
     value: number;
-    [key: string]: number | string; // Allow additional properties for benchmarks
+    // FIX: Updated the index signature to `any` to allow additional properties of complex types, such as the `events` array of objects, which was causing a type conflict.
+    [key: string]: any;
 }
 
 

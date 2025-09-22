@@ -63,10 +63,16 @@ const AllocationCharts: React.FC<AllocationChartsProps> = ({ portfolioData }) =>
     const onPieEnter = useCallback((_: any, index: number) => { setActiveIndex(index); }, []);
     const onPieLeave = useCallback(() => { setActiveIndex(null); }, []);
     
-    const totalValue = portfolioData.reduce((sum, asset) => sum + asset.cotacaoAtual * asset.quantidade, 0);
+    const USD_BRL_RATE = 5.25;
+
+    const totalValue = useMemo(() => portfolioData.reduce((sum, asset) => {
+        const currentRate = asset.moedaCotacao === 'USD' ? USD_BRL_RATE : 1;
+        return sum + (asset.cotacaoAtual * asset.quantidade * currentRate);
+    }, 0), [portfolioData]);
 
     const dataByCategory = useMemo(() => portfolioData.reduce((acc, asset) => {
-        const value = asset.cotacaoAtual * asset.quantidade;
+        const currentRate = asset.moedaCotacao === 'USD' ? USD_BRL_RATE : 1;
+        const value = asset.cotacaoAtual * asset.quantidade * currentRate;
         const category = asset.categoria;
         const existing = acc.find(item => item.name === category);
         if (existing) {
@@ -78,7 +84,8 @@ const AllocationCharts: React.FC<AllocationChartsProps> = ({ portfolioData }) =>
     }, [] as { name: string, value: number }[]).sort((a,b) => b.value - a.value), [portfolioData]);
 
     const dataByCountry = useMemo(() => portfolioData.reduce((acc, asset) => {
-        const value = asset.cotacaoAtual * asset.quantidade;
+        const currentRate = asset.moedaCotacao === 'USD' ? USD_BRL_RATE : 1;
+        const value = asset.cotacaoAtual * asset.quantidade * currentRate;
         const country = asset.pais;
         const existing = acc.find(item => item.name === country);
         if (existing) {

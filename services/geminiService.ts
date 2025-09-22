@@ -16,9 +16,11 @@ const assetDetailsSchema = {
     properties: {
         nome: { type: Type.STRING, description: "O nome completo oficial do ativo." },
         categoria: { type: Type.STRING, description: "A categoria do ativo. Ex: 'Ações', 'FIIs', 'Cripto', 'Tesouro Direto', 'Bancos'." },
-        pais: { type: Type.STRING, description: "O país de origem do ativo. Ex: 'Brasil', 'EUA'." },
+        pais: { type: Type.STRING, description: "O país de origem do ativo. Ex: 'Brasil', 'EUA', 'Global'." },
+        cotacaoAtual: { type: Type.NUMBER, description: "O preço de mercado atual aproximado do ativo." },
+        moedaCotacao: { type: Type.STRING, description: "A moeda da cotação atual. Deve ser 'BRL' para ativos brasileiros ou 'USD' para ativos dos EUA e Cripto." },
     },
-    required: ["nome", "categoria", "pais"],
+    required: ["nome", "categoria", "pais", "cotacaoAtual", "moedaCotacao"],
 };
 
 const throwErrorIfAiDisabled = () => {
@@ -29,7 +31,19 @@ const throwErrorIfAiDisabled = () => {
 
 export const getAssetDetails = async (ticker: string) => {
     throwErrorIfAiDisabled();
-    const prompt = `Dado o ticker de ativo financeiro '${ticker}', forneça seu nome completo, categoria e país de origem. Responda em português do Brasil.`;
+    const prompt = `
+        Analise o código de ativo financeiro (ticker) a seguir: '${ticker}'.
+        O ativo pode ser uma ação (ex: PETR4, AAPL), um Fundo Imobiliário (FII, ex: MXRF11), um criptoativo (ex: BTC, ETH, XRP), ou um título do Tesouro Direto.
+        
+        Sua tarefa é fornecer as seguintes informações:
+        1.  **nome**: O nome completo e oficial do ativo. Para criptoativos, use o nome da criptomoeda (ex: Bitcoin, Ripple, Ethereum).
+        2.  **categoria**: A categoria mais apropriada. Escolha uma das seguintes opções: 'Ações', 'FIIs', 'Cripto', 'Tesouro Direto', 'Bancos'. Para '${ticker}', qual é a melhor categoria?
+        3.  **pais**: O país de origem. Para ações brasileiras, 'Brasil'. Para ações americanas, 'EUA'. Para criptoativos, use 'Global'.
+        4.  **cotacaoAtual**: O preço de mercado atual e aproximado do ativo.
+        5.  **moedaCotacao**: A moeda em que a 'cotacaoAtual' está expressa. Deve ser 'USD' para ativos dos EUA e Criptoativos. Deve ser 'BRL' para ativos do Brasil.
+
+        Responda em português do Brasil.
+    `;
     const response = await ai!.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,

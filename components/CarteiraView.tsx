@@ -46,6 +46,7 @@ const CarteiraView: React.FC<CarteiraViewProps> = (props) => {
     const { formatCurrency, convertValue } = useCurrency();
 
     const portfolioStats = useMemo(() => {
+        const USD_BRL_RATE = 5.25;
         const data = props.portfolioData;
         if (data.length === 0) {
             return {
@@ -56,11 +57,17 @@ const CarteiraView: React.FC<CarteiraViewProps> = (props) => {
             };
         }
 
-        const assetsWithPerf = data.map(a => ({
-            ...a,
-            performance: a.precoCompra > 0 ? ((a.cotacaoAtual - a.precoCompra) / a.precoCompra) * 100 : 0,
-            marketValue: a.cotacaoAtual * a.quantidade,
-        }));
+        const assetsWithPerf = data.map(asset => {
+            const purchaseRate = asset.moedaCompra === 'USD' || asset.moedaCompra === 'USDT' ? USD_BRL_RATE : 1;
+            const currentRate = asset.moedaCotacao === 'USD' ? USD_BRL_RATE : 1;
+            const custoTotalEmBRL = asset.precoCompra * asset.quantidade * purchaseRate;
+            const valorMercadoEmBRL = asset.cotacaoAtual * asset.quantidade * currentRate;
+            return {
+                ...asset,
+                performance: custoTotalEmBRL > 0 ? ((valorMercadoEmBRL - custoTotalEmBRL) / custoTotalEmBRL) * 100 : 0,
+                marketValue: valorMercadoEmBRL,
+            };
+        });
 
         const best = assetsWithPerf.reduce((max, a) => a.performance > max.performance ? a : max, assetsWithPerf[0]);
         const worst = assetsWithPerf.reduce((min, a) => a.performance < min.performance ? a : min, assetsWithPerf[0]);

@@ -57,6 +57,8 @@ const generateAssetsForProfile = (profile: InvestorProfile): Asset[] => {
 
     return config.allocation.map(item => {
         const value = totalValue * (item.value / 100);
+        // FIX: Added missing 'moedaCotacao' property and corrected 'moedaCompra' logic to conform to Asset type.
+        const isUsdBased = item.name.includes('EUA') || item.name.includes('Cripto');
         return {
             id: idCounter++,
             ticker: item.example,
@@ -71,7 +73,8 @@ const generateAssetsForProfile = (profile: InvestorProfile): Asset[] => {
             riskProfile: profile === 'Conservador' ? 'Seguro' : profile === 'Moderado' ? 'Moderado' : 'Arriscado',
             historicoPreco: Array(7).fill(value),
             dividendYield: 0,
-            moedaCompra: 'BRL',
+            moedaCompra: isUsdBased ? 'USD' : 'BRL',
+            moedaCotacao: isUsdBased ? 'USD' : 'BRL',
             order_index: idCounter,
         };
     });

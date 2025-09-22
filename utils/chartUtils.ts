@@ -121,10 +121,11 @@ const benchmarkProfiles = {
     'CDI': { volatility: 0.0004, trendBias: 0.1 }, // very low volatility, strong positive bias
 };
 
-export const generateBenchmarkData = (benchmark: keyof typeof benchmarkProfiles, baseData: ChartDataPoint[]): ChartDataPoint[] => {
+export const generateBenchmarkData = (benchmark: 'IBOV' | 'S&P 500' | 'CDI' | 'IBOVESPA', baseData: ChartDataPoint[]): ChartDataPoint[] => {
     if (baseData.length === 0) return [];
     
-    const profile = benchmarkProfiles[benchmark];
+    const profileKey = benchmark === 'IBOV' ? 'IBOVESPA' : benchmark;
+    const profile = benchmarkProfiles[profileKey as keyof typeof benchmarkProfiles];
     const days = baseData.length;
     const startValue = baseData[0].value;
     const endValue = baseData[baseData.length - 1].value;

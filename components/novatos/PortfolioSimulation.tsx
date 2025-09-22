@@ -109,7 +109,8 @@ const PortfolioSimulation: React.FC<PortfolioSimulationProps> = ({ portfolio, on
 
              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                    <PatrimonialEvolutionChart portfolioData={portfolio} ref={evolutionChartRef} />
+                    {/* FIX: Pass empty arrays for proventosData and notifications as this is a simulation context. */}
+                    <PatrimonialEvolutionChart portfolioData={portfolio} proventosData={[]} notifications={[]} ref={evolutionChartRef} />
                 </div>
                 <div className="lg:col-span-1">
                      <DashboardAllocationChart portfolioData={portfolio} onNavigate={() => {}} showNavigationLink={false} />

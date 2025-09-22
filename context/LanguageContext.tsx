@@ -7,7 +7,10 @@ interface LanguageContextType {
     setLocale: (locale: Locale) => void;
 }
 
-export const LanguageContext = createContext<LanguageContextType>(null!);
+export const LanguageContext = createContext<LanguageContextType>({
+    locale: 'pt-BR',
+    setLocale: () => console.warn('LanguageProvider not found'),
+});
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [locale, setLocaleState] = useState<Locale>(() => {

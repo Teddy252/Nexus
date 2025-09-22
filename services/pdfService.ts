@@ -87,23 +87,30 @@ export const generatePortfolioPdf = async (portfolio: Asset[], derivedData: Deri
     // Assets Table
     const tableYPosition = chartYPosition + chartHeight + 15;
     
+    const USD_BRL_RATE = 5.25;
     const tableData = portfolio.map(asset => {
-        const valorMercado = asset.quantidade * asset.cotacaoAtual;
-        const lucroPrejuizo = valorMercado - (asset.quantidade * asset.precoCompra);
+        const purchaseRate = asset.moedaCompra === 'USD' || asset.moedaCompra === 'USDT' ? USD_BRL_RATE : 1;
+        const currentRate = asset.moedaCotacao === 'USD' ? USD_BRL_RATE : 1;
+        const valorMercadoEmBRL = asset.quantidade * asset.cotacaoAtual * currentRate;
+        const custoTotalEmBRL = asset.quantidade * asset.precoCompra * purchaseRate;
+        const lucroPrejuizoEmBRL = valorMercadoEmBRL - custoTotalEmBRL;
+        const precoMedioEmBRL = asset.quantidade > 0 ? custoTotalEmBRL / asset.quantidade : 0;
+        const precoAtualEmBRL = asset.cotacaoAtual * currentRate;
+
         return [
             asset.ticker,
             asset.categoria,
             asset.pais,
             asset.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 6 }),
-            formatCurrency(asset.precoCompra),
-            formatCurrency(asset.cotacaoAtual),
-            formatCurrency(valorMercado),
-            formatCurrency(lucroPrejuizo)
+            formatCurrency(precoMedioEmBRL),
+            formatCurrency(precoAtualEmBRL),
+            formatCurrency(valorMercadoEmBRL),
+            formatCurrency(lucroPrejuizoEmBRL)
         ];
     });
 
     autoTable(doc, {
-        head: [['Ativo', 'Categoria', 'País', 'Qtd.', 'Preço Médio', 'Preço Atual', 'Valor Mercado', 'L/P']],
+        head: [['Ativo', 'Categoria', 'País', 'Qtd.', 'Preço Médio (BRL)', 'Preço Atual (BRL)', 'Valor Mercado (BRL)', 'L/P (BRL)']],
         body: tableData,
         startY: tableYPosition,
         theme: 'grid',
